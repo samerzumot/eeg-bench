@@ -8,6 +8,7 @@ interface SampleDetailModalProps {
   title: string;
   subtitle?: string;
   badge?: string;
+  categoryLabel?: string;
   children: ReactNode;
   actionText?: string;
   onAction?: () => void;
@@ -19,6 +20,7 @@ export function SampleDetailModal({
   title,
   subtitle,
   badge,
+  categoryLabel,
   children,
   actionText,
   onAction,
@@ -53,7 +55,9 @@ export function SampleDetailModal({
                 {badge}
               </span>
             )}
-            <span className="text-xs text-text-secondary">Interactive Sample Data</span>
+            {categoryLabel && (
+              <span className="text-xs text-text-secondary">{categoryLabel}</span>
+            )}
           </div>
           <h2 className="text-2xl font-light tracking-tight text-text-primary">
             {title}

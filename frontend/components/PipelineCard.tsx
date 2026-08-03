@@ -66,6 +66,7 @@ export function PipelineCard({
         title={`Pipeline Details: ${name}`}
         subtitle={description}
         badge={`Accuracy: ${accuracy.toFixed(1)}% (AUC ${auc.toFixed(2)})`}
+        categoryLabel="Interactive Sample Data"
       >
         <div className="space-y-4 text-xs">
           <div className="p-4 bg-surface rounded-xl border border-border space-y-2 font-data">

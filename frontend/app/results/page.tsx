@@ -6,7 +6,7 @@ import { SubjectTable } from "@/components/SubjectTable";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { getBenchmarkResults } from "@/lib/api";
+import { getBenchmarkResults, isBackendOffline } from "@/lib/api";
 
 const PIPELINE_RESULTS = [
   {
@@ -154,7 +154,13 @@ print(results.groupby("pipeline")[["score"]].describe())
   return (
     <>
       {isSample && (
-        <OfflineBanner message="GCP backend offline — displaying sample benchmark results for BNCI2014_001." />
+        <OfflineBanner
+          message={
+            isBackendOffline()
+              ? "GCP backend offline — displaying sample benchmark results for BNCI2014_001."
+              : "Displaying sample benchmark results for BNCI2014_001."
+          }
+        />
       )}
       <div className="mx-auto max-w-6xl px-6 py-12">
         {/* Breadcrumb */}

@@ -102,6 +102,7 @@ export function PatternAlert({ patterns }: PatternAlertProps) {
           title={`Detected Pattern: ${selectedPattern.name}`}
           subtitle={selectedPattern.description}
           badge={`Severity: ${selectedPattern.severity}`}
+          categoryLabel="Interactive Sample Data"
         >
           <div className="p-4 bg-surface rounded-xl border border-border space-y-3 text-xs">
             <div>
