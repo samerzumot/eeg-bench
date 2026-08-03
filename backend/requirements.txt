@@ -1,0 +1,33 @@
+# EEG-Bench Backend — Scientific dependencies
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+python-multipart==0.0.9
+pydantic==2.9.0
+
+# Scientific stack
+moabb==1.1.0
+mne-bids==0.14.0
+braindecode>=0.8.0
+pyriemann
+mne>=1.7.0
+scikit-learn
+torch>=2.1.0
+skorch>=0.15.0
+
+# EEG-Dash
+eegdash==0.1.0
+
+# GCP
+google-cloud-firestore==2.16.0
+google-cloud-storage==2.16.0
+google-cloud-tasks==2.16.0
+google-cloud-aiplatform==1.48.0
+
+# Firebase Auth
+firebase-admin==6.5.0
+
+# Utilities
+numpy>=1.24.0
+pandas
+scipy>=1.11.0
+matplotlib>=3.7.0

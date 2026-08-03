@@ -1,0 +1,73 @@
+# EEG-Bench — Cloud Build CI/CD
+# Builds and deploys both frontend and backend to Cloud Run
+
+steps:
+  # ── Build Frontend ────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'infra/Dockerfile.frontend'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/mi-bench/frontend:latest'
+      - '.'
+
+  # ── Build Backend ─────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'infra/Dockerfile.backend'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/mi-bench/backend:latest'
+      - '.'
+
+  # ── Push Frontend ─────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/mi-bench/frontend:latest']
+
+  # ── Push Backend ──────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/mi-bench/backend:latest']
+
+  # ── Deploy Frontend to Cloud Run ──────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'mi-bench-frontend'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/mi-bench/frontend:latest'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+
+  # ── Deploy Backend to Cloud Run ───────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'mi-bench-backend'
+      - '--image'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/mi-bench/backend:latest'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '4Gi'
+      - '--cpu'
+      - '2'
+      - '--timeout'
+      - '300'
+
+substitutions:
+  _REGION: 'us-central1'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

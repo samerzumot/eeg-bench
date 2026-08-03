@@ -1,0 +1,4 @@
+# Fill in your values:
+project_id      = "mi-bench-prod"
+region          = "us-central1"
+billing_account = ""  # Your GCP billing account ID
