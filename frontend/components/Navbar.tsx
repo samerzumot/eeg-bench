@@ -9,10 +9,13 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-border">
+      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-border text-text-primary">
         <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="text-lg font-semibold tracking-tight text-text-primary">
+          <Link
+            href="/"
+            className="text-lg font-semibold tracking-tight text-text-primary hover:text-accent transition-colors"
+          >
             EEG-Bench
           </Link>
 
@@ -26,25 +29,25 @@ export function Navbar() {
             </Link>
             <Link
               href="/wizard"
-              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+              className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
             >
               Your Data
             </Link>
             <Link
               href="/about"
-              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+              className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
             >
               About
             </Link>
             <Link
               href="/clinician"
-              className="text-sm text-teal-600 hover:text-teal-700 transition-colors font-medium"
+              className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors"
             >
               Clinician Portal
             </Link>
             <button
               onClick={() => setShowSignIn(true)}
-              className="btn btn-outline text-sm py-1.5 px-4"
+              className="btn text-sm py-1.5 px-4 rounded-lg border btn-outline border-border-strong text-text-primary hover:bg-surface transition-all"
             >
               Sign In
             </button>
@@ -68,20 +71,40 @@ export function Navbar() {
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-border bg-white px-6 py-4 flex flex-col gap-3">
-            <Link href="/" className="text-sm font-medium text-accent" onClick={() => setMobileOpen(false)}>
+          <div className="md:hidden border-t px-6 py-4 flex flex-col gap-3 border-border bg-white">
+            <Link
+              href="/"
+              className="text-sm font-medium text-accent"
+              onClick={() => setMobileOpen(false)}
+            >
               bniAdam AI Research Lab
             </Link>
-            <Link href="/benchmark" className="text-sm text-text-secondary font-medium" onClick={() => setMobileOpen(false)}>
+            <Link
+              href="/benchmark"
+              className="text-sm font-medium text-text-secondary"
+              onClick={() => setMobileOpen(false)}
+            >
               Academic Researchers
             </Link>
-            <Link href="/wizard" className="text-sm text-text-secondary" onClick={() => setMobileOpen(false)}>
+            <Link
+              href="/wizard"
+              className="text-sm font-medium text-text-secondary"
+              onClick={() => setMobileOpen(false)}
+            >
               Your Data
             </Link>
-            <Link href="/about" className="text-sm text-text-secondary" onClick={() => setMobileOpen(false)}>
+            <Link
+              href="/about"
+              className="text-sm font-medium text-text-secondary"
+              onClick={() => setMobileOpen(false)}
+            >
               About
             </Link>
-            <Link href="/clinician" className="text-sm text-teal-600 font-medium" onClick={() => setMobileOpen(false)}>
+            <Link
+              href="/clinician"
+              className="text-sm font-medium text-teal-600"
+              onClick={() => setMobileOpen(false)}
+            >
               Clinician Portal
             </Link>
             <button
@@ -89,7 +112,7 @@ export function Navbar() {
                 setMobileOpen(false);
                 setShowSignIn(true);
               }}
-              className="btn btn-outline text-sm py-1.5 px-4 w-fit"
+              className="btn text-sm py-1.5 px-4 w-fit rounded-lg border btn-outline border-border-strong text-text-primary hover:bg-surface transition-all"
             >
               Sign In
             </button>
@@ -100,14 +123,14 @@ export function Navbar() {
       {/* Sign In Modal */}
       {showSignIn && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in"
           onClick={() => setShowSignIn(false)}
         >
           <div
-            className="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4"
+            className="rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 border bg-white border-border text-text-primary transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-medium text-text-primary">Sign In</h2>
+            <h2 className="text-xl font-medium">Sign In</h2>
             <p className="mt-2 text-sm text-text-secondary">
               Authentication is coming soon. For now, all features are available without signing in.
             </p>
@@ -115,7 +138,7 @@ export function Navbar() {
             <div className="mt-6 flex flex-col gap-3">
               <button
                 disabled
-                className="btn w-full py-2.5 bg-surface text-text-secondary border border-border rounded-lg opacity-50 cursor-not-allowed flex items-center justify-center gap-2"
+                className="btn w-full py-2.5 rounded-lg opacity-50 cursor-not-allowed flex items-center justify-center gap-2 border bg-surface border-border text-text-secondary"
               >
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                   <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
@@ -127,7 +150,7 @@ export function Navbar() {
               </button>
               <button
                 disabled
-                className="btn w-full py-2.5 bg-surface text-text-secondary border border-border rounded-lg opacity-50 cursor-not-allowed"
+                className="btn w-full py-2.5 rounded-lg opacity-50 cursor-not-allowed border bg-surface border-border text-text-secondary"
               >
                 Continue with Email
               </button>

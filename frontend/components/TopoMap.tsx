@@ -15,6 +15,7 @@ interface TopoMapProps {
   channelValues: Record<string, number>;
   bandLabel?: string;
   size?: number;
+  isDark?: boolean;
 }
 
 function interpolateColor(value: number, min: number, max: number): string {
@@ -26,7 +27,7 @@ function interpolateColor(value: number, min: number, max: number): string {
   return `rgb(${r},${g},${b})`;
 }
 
-export function TopoMap({ channelValues, bandLabel = "Alpha Power", size = 240 }: TopoMapProps) {
+export function TopoMap({ channelValues, bandLabel = "Alpha Power", size = 240, isDark = false }: TopoMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -50,13 +51,21 @@ export function TopoMap({ channelValues, bandLabel = "Alpha Power", size = 240 }
     const headRadius = size * 0.42;
 
     // Background fill
-    ctx.fillStyle = "#fafafa";
-    ctx.fillRect(0, 0, size, size);
+    ctx.clearRect(0, 0, size, size);
+    if (!isDark) {
+      ctx.fillStyle = "#fafafa";
+      ctx.fillRect(0, 0, size, size);
+    } else {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.02)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, headRadius, 0, 2 * Math.PI);
+      ctx.fill();
+    }
 
     // Head circle
     ctx.beginPath();
     ctx.arc(cx, cy, headRadius, 0, 2 * Math.PI);
-    ctx.strokeStyle = "#d1d1d6";
+    ctx.strokeStyle = isDark ? "rgba(255, 255, 255, 0.15)" : "#d1d1d6";
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -65,7 +74,7 @@ export function TopoMap({ channelValues, bandLabel = "Alpha Power", size = 240 }
     ctx.moveTo(cx - 8, cy - headRadius);
     ctx.lineTo(cx, cy - headRadius - 10);
     ctx.lineTo(cx + 8, cy - headRadius);
-    ctx.strokeStyle = "#d1d1d6";
+    ctx.strokeStyle = isDark ? "rgba(255, 255, 255, 0.15)" : "#d1d1d6";
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -81,7 +90,7 @@ export function TopoMap({ channelValues, bandLabel = "Alpha Power", size = 240 }
       // Gradient blob
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, size * 0.12);
       gradient.addColorStop(0, color);
-      gradient.addColorStop(1, "rgba(250,250,250,0)");
+      gradient.addColorStop(1, isDark ? "rgba(0,0,0,0)" : "rgba(250,250,250,0)");
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(x, y, size * 0.12, 0, 2 * Math.PI);
@@ -99,21 +108,25 @@ export function TopoMap({ channelValues, bandLabel = "Alpha Power", size = 240 }
       // Dot
       ctx.beginPath();
       ctx.arc(x, y, 3, 0, 2 * Math.PI);
-      ctx.fillStyle = "#1d1d1f";
+      ctx.fillStyle = isDark ? "#ffffff" : "#1d1d1f";
       ctx.fill();
 
       // Label
-      ctx.fillStyle = "#86868b";
+      ctx.fillStyle = isDark ? "rgba(255, 255, 255, 0.4)" : "#86868b";
       ctx.font = `400 ${size * 0.04}px "Inter", sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       ctx.fillText(ch, x, y + 5);
     });
-  }, [channelValues, size]);
+  }, [channelValues, size, isDark]);
 
   return (
-    <div className="card p-6 flex flex-col items-center">
-      <h3 className="text-base font-medium text-text-primary mb-3">
+    <div className={`flex flex-col items-center p-6 rounded-2xl border transition-colors ${
+      isDark
+        ? "bg-white/[0.02] border-white/10"
+        : "bg-surface border-border shadow-xs"
+    }`}>
+      <h3 className={`text-sm font-medium mb-3 ${isDark ? "text-white" : "text-text-primary"}`}>
         {bandLabel} Topography
       </h3>
       <canvas
@@ -121,12 +134,12 @@ export function TopoMap({ channelValues, bandLabel = "Alpha Power", size = 240 }
         style={{ width: size, height: size }}
         className="rounded-lg"
       />
-      <div className="flex items-center gap-2 mt-3">
-        <span className="text-[10px] text-text-secondary">Low</span>
+      <div className="flex items-center gap-2 mt-4">
+        <span className={`text-[10px] ${isDark ? "text-white/40" : "text-text-secondary"}`}>Low Activation</span>
         <div className="w-24 h-2 rounded-full" style={{
           background: "linear-gradient(90deg, rgb(0,100,200), rgb(100,255,100), rgb(255,55,0))"
         }} />
-        <span className="text-[10px] text-text-secondary">High</span>
+        <span className={`text-[10px] ${isDark ? "text-white/40" : "text-text-secondary"}`}>High Activation</span>
       </div>
     </div>
   );
