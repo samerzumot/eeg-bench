@@ -112,7 +112,7 @@ export function LabNeuralGraphic() {
       <div className="absolute bottom-3 left-4 flex items-center gap-2">
         <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
         <span className="text-[11px] font-data text-text-secondary uppercase tracking-widest">
-          BNIADAM-1 LATENT SIGNAL STREAM · 256 Hz
+          SYNTHETIC EEG MOTOR IMAGERY SIGNAL STREAM · 256 Hz
         </span>
       </div>
     </div>

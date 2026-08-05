@@ -52,7 +52,7 @@ export default function BenchmarkPage() {
             <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
             <span>ACADEMIC RESEARCHER BENCHMARK ENGINE</span>
           </div>
-          <span>POWERED BY BNIADAM AI RESEARCH LAB</span>
+          <span>OPEN SCIENTIFIC STANDARDS</span>
         </div>
       </div>
 
