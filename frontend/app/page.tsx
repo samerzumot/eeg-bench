@@ -111,11 +111,7 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           {/* Hero Left Column */}
           <div className="lg:col-span-7 flex flex-col items-start text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/25 bg-accent/5 text-accent text-xs font-data mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-              bniAdam-1 Release Preview
-            </div>
-            
+
             <h1 className="text-4xl sm:text-5xl md:text-[3.50rem] font-light tracking-tight leading-[1.1] text-text-primary">
               Decoding human neural signals with{" "}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent via-emerald-600 to-teal-500 font-medium">
@@ -153,7 +149,7 @@ export default function Home() {
 
           {/* Hero Right Column (Live BCI Telemetry Deck) */}
           <div className="lg:col-span-5 w-full">
-            <InteractiveTelemetry isDark={false} />
+            <InteractiveTelemetry />
           </div>
         </div>
       </section>
