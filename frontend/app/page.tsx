@@ -4,9 +4,13 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { InteractiveTelemetry } from "@/components/InteractiveTelemetry";
 import { TopoMap } from "@/components/TopoMap";
+import { SampleDetailModal } from "@/components/SampleDetailModal";
 
 export default function Home() {
   const [activePillar, setActivePillar] = useState(0);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [email, setEmail] = useState("");
 
   // TopoMap state for Pillar 3
   const [topoValues, setTopoValues] = useState<Record<string, number>>({
@@ -45,6 +49,25 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [activePillar]);
 
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    try {
+      await fetch("/api/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          type: "lab_access_inquiry",
+          recipient: "srzumot@gmail.com",
+        }),
+      });
+    } catch (err) {
+      console.error("Submission error:", err);
+    }
+    setContactSubmitted(true);
+  };
+
   return (
     <div className="bg-[#FAFBFD] text-text-primary selection:bg-accent/10 font-sans min-h-screen relative overflow-hidden">
       {/* Background soft glowing gradients */}
@@ -56,9 +79,9 @@ export default function Home() {
         <div className="mx-auto max-w-6xl flex items-center justify-between text-[11px] text-text-secondary font-data">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-            <span>EEG-BENCH RESEARCH PLATFORM</span>
+            <span>BNIADAM AI RESEARCH LAB · TORONTO</span>
           </div>
-          <span className="hidden sm:inline-block tracking-wider">STANDARDIZED BENCHMARK FOR MEDICAL ELECTROPHYSIOLOGY</span>
+          <span className="hidden sm:inline-block tracking-wider">FOUNDATION MODELS FOR MEDICAL ELECTROPHYSIOLOGY</span>
         </div>
       </div>
 
@@ -68,14 +91,14 @@ export default function Home() {
           {/* Hero Left Column */}
           <div className="lg:col-span-7 flex flex-col items-start text-left">
             <h1 className="text-4xl sm:text-5xl md:text-[3.50rem] font-light tracking-tight leading-[1.1] text-text-primary">
-              Standardized Benchmarking for{" "}
+              Decoding human neural signals with{" "}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent via-emerald-600 to-teal-500 font-medium">
-                Clinical EEG.
+                clinical precision.
               </span>
             </h1>
 
             <p className="mt-6 text-base md:text-lg text-text-secondary max-w-xl font-normal leading-relaxed text-balance">
-              EEG-Bench is an open-source evaluation platform for motor imagery translation and clinical EEG analysis, supporting standardized pipelines with zero human data leakage.
+              bniAdam AI Research Lab develops self-supervised foundation models and standardized benchmark infrastructure for clinical electrophysiology and motor imagery translation.
             </p>
 
             {/* Action CTAs */}
@@ -92,12 +115,12 @@ export default function Home() {
               >
                 Use Your Data
               </Link>
-              <Link
-                href="/clinician"
-                className="btn border border-transparent text-text-secondary hover:text-text-primary rounded-full px-6 py-3 text-sm transition-all"
+              <button
+                onClick={() => setActiveModal("contact")}
+                className="btn border border-transparent text-text-secondary hover:text-text-primary rounded-full px-6 py-3 text-sm transition-all text-left"
               >
-                Clinician Portal
-              </Link>
+                Lab Collaboration
+              </button>
             </div>
           </div>
 
@@ -131,20 +154,20 @@ export default function Home() {
                 {
                   id: 0,
                   num: "01",
-                  title: "Standard Classifiers",
-                  desc: "Evaluate established spatial-temporal architectures (CSP+LDA, Riemannian MDM, and EEGNet) on public or uploaded EEG datasets.",
+                  title: "Neural Foundation Models",
+                  desc: "Self-supervised spatial-temporal architectures pre-trained on multi-site EEG, EMG, and ECoG signal recordings.",
                 },
                 {
                   id: 1,
                   num: "02",
-                  title: "Rigorous Evaluation",
-                  desc: "Deterministic evaluation utilizing MOABB standards, within-session cross-validation, and automatic Python code export.",
+                  title: "Standardized Evaluation",
+                  desc: "Rigorous within-session cross-validation, Riemannian geometry metrics, and deterministic reproduction scripts via EEG-Bench.",
                 },
                 {
                   id: 2,
                   num: "03",
-                  title: "Clinical Analysis",
-                  desc: "Compute power spectral density distributions, topography maps, and composite biomarker indexes for resting-state EEG.",
+                  title: "Diagnostic Intelligence",
+                  desc: "Translating continuous bio-signals into actionable motor-imagery classification and topographic spectral anomaly detection.",
                 },
               ].map((pillar) => (
                 <button
@@ -181,7 +204,7 @@ export default function Home() {
                 <div className="flex flex-col justify-between h-full">
                   <div>
                     <div className="flex items-center justify-between text-xs font-data text-text-secondary mb-6">
-                      <span>VISUALIZER: PIPELINE ARCHITECTURE</span>
+                      <span>VISUALIZER: ARCHITECTURE BACKBONE</span>
                       <span className="text-accent font-semibold">ACTIVE</span>
                     </div>
 
@@ -205,17 +228,22 @@ export default function Home() {
 
                       <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-between">
                         <div>
-                          <div className="text-xs text-text-primary font-semibold">3. Riemannian Covariance Manifold Mapping</div>
-                          <div className="text-[10px] text-text-secondary">Computes trial-wise geometric distances directly on SPD manifolds</div>
+                          <div className="text-xs text-text-primary font-semibold">3. Multi-Head Self-Attention</div>
+                          <div className="text-[10px] text-text-secondary">Captures long-range temporal correlations across epoch windows</div>
                         </div>
-                        <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px]">Riemannian MDM</span>
+                        <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px]">Attention Module</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
-                    <span className="text-xs font-semibold text-text-secondary">Standard BCI Pipelines</span>
-                    <span className="text-[10px] font-data text-text-secondary">Open Source Frameworks</span>
+                    <button
+                      onClick={() => setActiveModal("model_spec")}
+                      className="text-xs font-semibold text-accent hover:text-accent-hover flex items-center gap-1"
+                    >
+                      View Complete Specification →
+                    </button>
+                    <span className="text-[10px] font-data text-text-secondary">4.8M Trainable Parameters</span>
                   </div>
                 </div>
               )}
@@ -438,6 +466,81 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Modals */}
+
+      {/* 1. Model Spec Modal */}
+      <SampleDetailModal
+        isOpen={activeModal === "model_spec"}
+        onClose={() => setActiveModal(null)}
+        title="bniAdam-1 Neural Backbone Specification"
+        subtitle="Architecture details & spatial filter decomposition"
+        badge="Model Spec"
+      >
+        <div className="space-y-3 text-xs font-data text-text-primary">
+          <div className="p-3 bg-surface rounded-xl border border-border space-y-1.5">
+            <p><strong>Architecture:</strong> Spatial-Temporal Convolutions + Multi-Head Self-Attention</p>
+            <p><strong>Parameters:</strong> 4.8M weights (optimised for clinical research deployment)</p>
+            <p><strong>Receptive Field:</strong> 2.5s window at 250 Hz (625 time samples)</p>
+            <p><strong>Supported Montages:</strong> 10-20 system (8, 16, 32, 64 channels)</p>
+            <p><strong>Pre-processing:</strong> 1-45 Hz bandpass filter + moving average standardization</p>
+          </div>
+        </div>
+      </SampleDetailModal>
+
+      {/* 2. Contact / Lab Access Request Modal */}
+      <SampleDetailModal
+        isOpen={activeModal === "contact"}
+        onClose={() => {
+          setActiveModal(null);
+          setContactSubmitted(false);
+        }}
+        title="Request Lab Collaboration"
+        subtitle="Connect with the bniAdam AI Research Lab team"
+        badge="Partnerships"
+      >
+        {contactSubmitted ? (
+          <div className="p-6 text-center bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200">
+            <h4 className="font-medium text-base">Request Submitted</h4>
+            <p className="mt-1 text-xs text-emerald-700">
+              Thank you for reaching out. A research scientist from bniAdam AI Research Lab will respond within 24 hours.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleContactSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-text-primary mb-1">
+                Academic / Organization Email
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="researcher@university.edu"
+                className="w-full px-3.5 py-2 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:border-accent text-text-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-primary mb-1">
+                Area of Interest
+              </label>
+              <select className="w-full px-3.5 py-2 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:border-accent text-text-primary">
+                <option>Clinical Trial Partnership</option>
+                <option>EEG-Bench Dataset Integration</option>
+                <option>bniAdam-1 Foundation Model Access</option>
+                <option>General Research Inquiry</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              className="btn btn-primary w-full py-2.5 text-sm rounded-lg"
+            >
+              Submit Lab Request
+            </button>
+          </form>
+        )}
+      </SampleDetailModal>
     </div>
   );
 }

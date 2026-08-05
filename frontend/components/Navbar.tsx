@@ -77,7 +77,7 @@ export function Navbar() {
               className="text-sm font-medium text-accent"
               onClick={() => setMobileOpen(false)}
             >
-              EEG-Bench
+              bniAdam AI Research Lab
             </Link>
             <Link
               href="/benchmark"
