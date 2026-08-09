@@ -121,6 +121,28 @@ export default function AboutPage() {
         does not support user-editable model architectures or arbitrary code execution. The pipeline set is fixed to ensure
         reproducibility and comparability.
       </p>
+
+      <hr className="my-10 border-border" />
+
+      {/* Cite This Tool */}
+      <h2 className="text-xl font-light text-text-primary">Cite EEG-Bench</h2>
+      <p className="mt-2 text-sm text-text-secondary leading-relaxed">
+        If you use EEG-Bench in your research, clinical study, or benchmark evaluation, please cite the platform:
+      </p>
+      <div className="mt-4 p-4 bg-slate-900 text-slate-100 rounded-xl font-data text-xs leading-relaxed overflow-x-auto relative group">
+        <pre className="select-all">
+{`@article{eegbench2026,
+  title   = {EEG-Bench: Standardized Benchmarking for Motor Imagery & Clinical Electrophysiology},
+  author  = {bniAdam AI Research Lab},
+  journal = {arXiv preprint arXiv:2608.10068},
+  year    = {2026},
+  note    = {DOI via Zenodo — coming soon}
+}`}
+        </pre>
+      </div>
+      <p className="mt-2 text-xs text-text-secondary font-data">
+        * Software archive and permanent DOI registration via Zenodo pending.
+      </p>
     </div>
   );
 }

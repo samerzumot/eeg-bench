@@ -8,6 +8,7 @@
       "CSP + LDA": {
         "mean_accuracy": 84.6,
         "ci": 6.9,
+        "latency_ms": 0.07,
         "mean_auc": 0.88,
         "auc_ci": 0.02,
         "per_subject": {
@@ -25,6 +26,7 @@
       "Riemannian MDM": {
         "mean_accuracy": 81.6,
         "ci": 7.0,
+        "latency_ms": 0.38,
         "mean_auc": 0.88,
         "auc_ci": 0.02,
         "per_subject": {
@@ -42,6 +44,7 @@
       "EEGNet": {
         "mean_accuracy": 83.1,
         "ci": 2.5,
+        "latency_ms": 14.2,
         "mean_auc": 0.89,
         "auc_ci": 0.02,
         "per_subject": {

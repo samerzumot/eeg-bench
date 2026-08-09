@@ -30,6 +30,7 @@ export default function BenchmarkPage() {
   const [showResults, setShowResults] = useState(false);
   const [activeStepModal, setActiveStepModal] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeTrack, setActiveTrack] = useState<"mi" | "gait">("mi");
 
   const handleRunBenchmark = async () => {
     setIsRunning(true);
@@ -91,16 +92,66 @@ export default function BenchmarkPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="mx-auto max-w-6xl px-6 pt-16 pb-16 md:pt-20 md:pb-24">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-12 items-start">
-            {/* Left: content */}
-            <div>
-              {/* Heading */}
-              <h1 className="text-4xl md:text-5xl lg:text-[3.25rem] font-light tracking-tight leading-tight text-text-primary">
-                Motor Imagery
-                <br />
-                Academic Benchmark
-              </h1>
+        <div className="mx-auto max-w-6xl px-6 pt-12 pb-16 md:pt-16 md:pb-24">
+          {/* Track Selection Tabs */}
+          <div className="flex items-center gap-3 mb-8">
+            <button
+              onClick={() => setActiveTrack("mi")}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all font-data ${
+                activeTrack === "mi"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-surface text-text-secondary hover:text-text-primary border border-border"
+              }`}
+            >
+              Motor Imagery Track
+            </button>
+            <button
+              onClick={() => setActiveTrack("gait")}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all font-data flex items-center gap-2 ${
+                activeTrack === "gait"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-surface text-text-secondary hover:text-text-primary border border-border"
+              }`}
+            >
+              <span>Mobility & Gait Decoding</span>
+              <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[9px] font-bold uppercase">
+                In Progress
+              </span>
+            </button>
+          </div>
+
+          {activeTrack === "gait" ? (
+            <div className="p-8 rounded-2xl bg-white border border-border max-w-2xl">
+              <div className="flex items-center gap-2 text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs font-data mb-4">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <span>Dataset Integration in Active Development</span>
+              </div>
+              <h2 className="text-2xl font-light text-text-primary">
+                Mobility-State & Gait Decoding Track
+              </h2>
+              <p className="mt-3 text-sm text-text-secondary leading-relaxed">
+                This track evaluates locomotion state classification (sit vs. stand vs. walking phase) from continuous electrophysiology, central to adaptive-DBS gait research for movement disorders.
+              </p>
+              <p className="mt-3 text-xs text-text-secondary font-data">
+                BIDS-formatted walking datasets from OpenNeuro and EEG-Dash are currently being integrated into MNE pipeline loaders. In accordance with strict EEG-Bench data policies, no placeholder data is shown.
+              </p>
+              <button
+                onClick={() => setActiveTrack("mi")}
+                className="mt-6 btn btn-outline text-xs font-medium px-4 py-2"
+              >
+                ← Return to Motor Imagery Benchmark
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-12 items-start">
+              {/* Left: content */}
+              <div>
+                {/* Heading */}
+                <h1 className="text-4xl md:text-5xl lg:text-[3.25rem] font-light tracking-tight leading-tight text-text-primary">
+                  Motor Imagery
+                  <br />
+                  Academic Benchmark
+                </h1>
 
               <p className="mt-4 text-lg text-text-secondary max-w-lg">
                 Three pipelines. One click. Reproducible scientific results.
@@ -166,8 +217,9 @@ export default function BenchmarkPage() {
               <EegTrace channels={5} />
             </div>
           </div>
-        </div>
-      </section>
+        )}
+      </div>
+    </section>
 
       {/* How it works — brief */}
       <section className="bg-surface">
