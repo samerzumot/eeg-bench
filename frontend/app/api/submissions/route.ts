@@ -15,6 +15,30 @@ export async function POST(request: Request) {
       console.log(`Area of Interest: ${area_of_interest}`);
     }
 
+    // Forward the submission to formsubmit.co (free, no API key required)
+    const formSubmitResponse = await fetch(`https://formsubmit.co/ajax/${targetRecipient}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        subject: "New Website Submission - bniAdam AI Lab",
+        email: email,
+        submission_type: type,
+        area_of_interest: area_of_interest || "N/A",
+        timestamp: new Date().toLocaleString(),
+      }),
+    });
+
+    console.log(`FormSubmit response status: ${formSubmitResponse.status}`);
+    const formSubmitText = await formSubmitResponse.text();
+    console.log(`FormSubmit response text: ${formSubmitText}`);
+
+    if (!formSubmitResponse.ok) {
+      throw new Error(`Failed to forward submission: ${formSubmitResponse.statusText}`);
+    }
+
     return NextResponse.json({
       success: true,
       message: `Submission successfully recorded and dispatched to ${targetRecipient}`,

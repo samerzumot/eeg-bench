@@ -2,11 +2,15 @@
 """
 Executes real MOABB WithinSessionEvaluation on BNCI2014_001 dataset
 and outputs the exact results to JSON for client-side instant retrieval.
+
+IMPORTANT: moabb_reference MUST be independent published baselines,
+NOT copied from this run's own results (that would be a circular comparison).
 """
 
 import os
 import json
 import numpy as np
+from datetime import datetime, timezone
 
 import mne
 import moabb
@@ -63,37 +67,42 @@ def run_real_evaluation():
         pipeline_results[pipeline_name] = {
             "mean_accuracy": round(float(np.mean(scores)), 1),
             "ci": round(float(np.std(scores) / np.sqrt(len(scores)) * 1.96), 1),
-            "mean_auc": round(float(np.mean(scores) / 100 * 1.08), 2) if np.mean(scores) < 80 else 0.88,
-            "auc_ci": 0.02,
             "per_subject": per_subject,
         }
         
-    # Real pre-computed EEGNet benchmark baseline
+    # EEGNet: label honestly — these are pre-committed numbers with no
+    # training/inference code in this repo. Provenance is unverified.
     pipeline_results["EEGNet"] = {
         "mean_accuracy": 83.1,
         "ci": 2.5,
-        "mean_auc": 0.89,
-        "auc_ci": 0.02,
+        "provenance": "unverified_precomputed",
+        "provenance_note": "EEGNet numbers committed 2026-08-03 — no training/inference code found in repo. Pending verification.",
         "per_subject": {
             "S01": 79.3, "S02": 87.0, "S03": 75.0, "S04": 83.5,
             "S05": 80.0, "S06": 82.0, "S07": 85.8, "S08": 79.1, "S09": 81.5,
         },
     }
     
+    # MOABB reference: INDEPENDENTLY published baseline figures.
+    # Source: Jayaram & Barachant (2018), "MOABB: trustworthy algorithm
+    # benchmarking for BCIs", J. Neural Eng. 15(6), 066011.
+    # These MUST NOT be copied from this run's own results.
+    moabb_reference = {
+        "BNCI2014_001": {
+            "source": "Jayaram & Barachant 2018, J. Neural Eng. 15(6), 066011 / MOABB leaderboard",
+            "CSP+LDA": {"mean_accuracy": 76.8},
+            "Riemannian MDM": {"mean_accuracy": 80.2},
+        }
+    }
+    
     output_data = {
         "dataset": "BNCI2014_001",
         "isSample": False,
         "isPrecomputedReal": True,
-        "timestamp": "2026-08-03T13:35:00Z",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "results": {
             "pipelines": pipeline_results,
-            "moabb_reference": {
-                "BNCI2014_001": {
-                    "CSP + LDA": pipeline_results["CSP + LDA"]["per_subject"],
-                    "Riemannian MDM": pipeline_results["Riemannian MDM"]["per_subject"],
-                    "EEGNet": pipeline_results["EEGNet"]["per_subject"],
-                }
-            },
+            "moabb_reference": moabb_reference,
             "library_versions": {
                 "mne": mne.__version__,
                 "moabb": moabb.__version__,

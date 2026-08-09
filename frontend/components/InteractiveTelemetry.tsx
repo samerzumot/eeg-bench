@@ -244,8 +244,8 @@ export function InteractiveTelemetry() {
             <span className="text-[10px] font-data font-bold tracking-widest text-slate-400 uppercase">
               EEG-Bench Decoder
             </span>
-            <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 text-[9px] font-data uppercase font-semibold">
-              Live
+            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 text-[9px] font-data uppercase font-semibold">
+              Simulated Replay
             </span>
           </div>
 

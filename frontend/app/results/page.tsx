@@ -6,159 +6,201 @@ import { SubjectTable } from "@/components/SubjectTable";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { getBenchmarkResults, isBackendOffline } from "@/lib/api";
-
-const PIPELINE_RESULTS = [
-  {
-    name: "CSP + LDA",
-    description: "Extracts spatial patterns that maximize variance between classes.",
-    accuracy: 78.2,
-    ci: 3.1,
-    auc: 0.84,
-    aucCi: 0.03,
-  },
-  {
-    name: "Riemannian MDM",
-    description: "Classifies EEG covariance matrices using geometric distances.",
-    accuracy: 81.4,
-    ci: 2.8,
-    auc: 0.87,
-    aucCi: 0.02,
-  },
-  {
-    name: "EEGNet",
-    description: "Compact convolutional neural network designed for EEG signals.",
-    accuracy: 83.1,
-    ci: 2.5,
-    auc: 0.89,
-    aucCi: 0.02,
-  },
-];
-
-const SUBJECTS = [
-  { id: "S01", userAcc: 76.5, moabbAcc: 75.8, accuracies: { "CSP + LDA": 73.2, "Riemannian MDM": 77.1, "EEGNet": 79.3 } },
-  { id: "S02", userAcc: 85.2, moabbAcc: 83.0, accuracies: { "CSP + LDA": 82.5, "Riemannian MDM": 86.2, "EEGNet": 87.0 } },
-  { id: "S03", userAcc: 71.8, moabbAcc: 73.5, accuracies: { "CSP + LDA": 68.4, "Riemannian MDM": 72.1, "EEGNet": 75.0 } },
-  { id: "S04", userAcc: 82.3, moabbAcc: 81.9, accuracies: { "CSP + LDA": 79.8, "Riemannian MDM": 83.5, "EEGNet": 83.5 } },
-  { id: "S05", userAcc: 78.1, moabbAcc: 79.2, accuracies: { "CSP + LDA": 75.3, "Riemannian MDM": 79.0, "EEGNet": 80.0 } },
-  { id: "S06", userAcc: 80.5, moabbAcc: 80.1, accuracies: { "CSP + LDA": 78.0, "Riemannian MDM": 81.5, "EEGNet": 82.0 } },
-  { id: "S07", userAcc: 84.0, moabbAcc: 82.5, accuracies: { "CSP + LDA": 81.2, "Riemannian MDM": 85.1, "EEGNet": 85.8 } },
-  { id: "S08", userAcc: 77.3, moabbAcc: 78.0, accuracies: { "CSP + LDA": 74.5, "Riemannian MDM": 78.2, "EEGNet": 79.1 } },
-  { id: "S09", userAcc: 79.5, moabbAcc: 78.9, accuracies: { "CSP + LDA": 76.8, "Riemannian MDM": 80.5, "EEGNet": 81.5 } },
-];
+import { getBenchmarkResults, getReproducibleScript, getMethodsParagraph, isBackendOffline } from "@/lib/api";
 
 const PIPELINE_DESCRIPTIONS: Record<string, string> = {
   "CSP + LDA": "Extracts spatial patterns that maximize variance between classes.",
+  "CSP+LDA": "Extracts spatial patterns that maximize variance between classes.",
   "Riemannian MDM": "Classifies EEG covariance matrices using geometric distances.",
   "EEGNet": "Compact convolutional neural network designed for EEG signals.",
 };
-
-const METHODS_TEXT = `EEG signals were preprocessed using MNE-Python v1.7.0 (Gramfort et al., 2013), including bandpass filtering (8–30 Hz) and 50/60 Hz notch filtering. Classification was performed using three pipelines: (1) Common Spatial Patterns with Linear Discriminant Analysis (CSP+LDA), (2) Riemannian Minimum Distance to Mean (MDM) via pyRiemann v0.5 (Barachant et al., 2013), and (3) EEGNet v4 via Braindecode v1.0.0 (Schirrmeister et al., 2017). Evaluation used within-session cross-validation as implemented by MOABB v1.1.0 (Jayaram & Barachant, 2018). Data was sourced from the BNCI2014_001 dataset (9 subjects, 22 EEG channels, 2-class motor imagery: left hand vs. right hand).`;
-
-const LIB_VERSIONS = "mne 1.7.0 · moabb 1.1.0 · braindecode 1.0.0 · pyriemann 0.5 · scikit-learn 1.4.0";
 
 function ResultsContent() {
   const searchParams = useSearchParams();
   const jobId = searchParams.get("jobId");
 
-  const [pipelineResults, setPipelineResults] = useState(PIPELINE_RESULTS);
-  const [subjects, setSubjects] = useState(SUBJECTS);
+  const [pipelineResults, setPipelineResults] = useState<Array<{
+    name: string;
+    description: string;
+    accuracy: number;
+    ci: number;
+    auc: number;
+    aucCi: number;
+  }>>([]);
+  const [subjects, setSubjects] = useState<Array<{
+    id: string;
+    userAcc: number;
+    moabbAcc: number;
+    accuracies: Record<string, number>;
+  }>>([]);
   const [datasetName, setDatasetName] = useState("BNCI2014_001");
+  const [dataSource, setDataSource] = useState<string | null>(null);
   const [isSample, setIsSample] = useState(false);
   const [showMethods, setShowMethods] = useState(false);
   const [copiedMethods, setCopiedMethods] = useState(false);
+  const [methodsText, setMethodsText] = useState<string | null>(null);
+  const [methodsError, setMethodsError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [libVersions, setLibVersions] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!jobId) return;
-    getBenchmarkResults(jobId).then((data) => {
-      if (data?.isSample || jobId.startsWith("demo") || jobId.startsWith("custom")) {
-        setIsSample(true);
-      }
-      if (data?.results?.pipelines) {
+    if (!jobId) {
+      setError("No job ID provided. Please run a benchmark first.");
+      setLoading(false);
+      return;
+    }
+
+    getBenchmarkResults(jobId)
+      .then((data) => {
+        setIsSample(data.isSample || false);
+        setDataSource(data.dataSource || null);
         setDatasetName(data.dataset || "BNCI2014_001");
-        const formattedPipelines = Object.entries(data.results.pipelines).map(([name, p]) => ({
-          name,
-          description: PIPELINE_DESCRIPTIONS[name] || "Standard EEG classification pipeline.",
-          accuracy: p.mean_accuracy,
-          ci: p.ci,
-          auc: p.mean_auc || 0.85,
-          aucCi: p.auc_ci || 0.02,
-        }));
-        if (formattedPipelines.length > 0) setPipelineResults(formattedPipelines);
-      }
-    }).catch(() => {
-      setIsSample(true);
-    });
+
+        if (data?.results?.pipelines) {
+          const formattedPipelines = Object.entries(data.results.pipelines).map(([name, p]) => ({
+            name,
+            description: PIPELINE_DESCRIPTIONS[name] || "Standard EEG classification pipeline.",
+            accuracy: p.mean_accuracy,
+            ci: p.ci,
+            auc: p.mean_auc || 0,
+            aucCi: p.auc_ci || 0,
+          }));
+          setPipelineResults(formattedPipelines);
+
+          // Build subject-level data from per_subject maps
+          const allPipelineNames = Object.keys(data.results.pipelines);
+          const firstPipeline = data.results.pipelines[allPipelineNames[0]];
+          const subjectIds = firstPipeline?.per_subject ? Object.keys(firstPipeline.per_subject) : [];
+
+          const formattedSubjects = subjectIds.map((sid) => {
+            const accuracies: Record<string, number> = {};
+            let totalAcc = 0;
+            let count = 0;
+            allPipelineNames.forEach((pName) => {
+              const val = data.results.pipelines[pName]?.per_subject?.[sid] || 0;
+              accuracies[pName] = val;
+              totalAcc += val;
+              count++;
+            });
+            const userAcc = count > 0 ? totalAcc / count : 0;
+
+            // MOABB reference: use distinct reference data if available, otherwise leave 0
+            let moabbAcc = 0;
+            if (data.results.moabb_reference) {
+              const ref = data.results.moabb_reference[data.dataset || "BNCI2014_001"];
+              if (ref) {
+                const refPipeline = Object.keys(ref)[0];
+                moabbAcc = ref[refPipeline]?.[sid] || 0;
+              }
+            }
+            return { id: sid, userAcc: Math.round(userAcc * 10) / 10, moabbAcc, accuracies };
+          });
+          setSubjects(formattedSubjects);
+        }
+
+        // Library versions
+        if (data.results?.library_versions) {
+          const v = data.results.library_versions;
+          setLibVersions(Object.entries(v).map(([k, val]) => `${k} ${val}`).join(" · "));
+        }
+
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Failed to load results.");
+        setLoading(false);
+      });
   }, [jobId]);
 
   const handleCopyMethods = async () => {
-    await navigator.clipboard.writeText(METHODS_TEXT);
+    if (!methodsText && jobId) {
+      // Fetch on first click
+      try {
+        const text = await getMethodsParagraph(jobId);
+        setMethodsText(text);
+        await navigator.clipboard.writeText(text);
+      } catch {
+        setCopiedMethods(false);
+        setMethodsError("Could not fetch methods from backend.");
+        return;
+      }
+    } else if (methodsText) {
+      await navigator.clipboard.writeText(methodsText);
+    }
     setCopiedMethods(true);
     setTimeout(() => setCopiedMethods(false), 2000);
   };
 
-  const handleDownloadScript = () => {
-    const script = `#!/usr/bin/env python3
-"""
-EEG-Bench Reproducible Benchmark Script
-Dataset: ${datasetName} | Paradigm: 2-class Motor Imagery
-Generated by EEG-Bench
-
-Requirements:
-  pip install mne==1.7.0 moabb==1.1.0 braindecode==1.0.0 pyriemann==0.5 scikit-learn==1.4.0 torch
-"""
-
-from pyriemann.classification import MDM
-from pyriemann.estimation import Covariances
-from mne.decoding import CSP
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-from sklearn.pipeline import Pipeline
-from moabb.datasets import BNCI2014_001
-from moabb.evaluations import WithinSessionEvaluation
-from moabb.paradigms import MotorImagery
-
-# Dataset & paradigm
-dataset = BNCI2014_001()
-paradigm = MotorImagery(n_classes=2, fmin=8, fmax=30)
-
-# Pipelines
-pipelines = {}
-pipelines["CSP+LDA"] = Pipeline([
-    ("CSP", CSP(n_components=8)),
-    ("LDA", LDA())
-])
-pipelines["Riemannian MDM"] = Pipeline([
-    ("Covariances", Covariances(estimator="oas")),
-    ("MDM", MDM(metric={"mean": "riemann", "distance": "riemann"}))
-])
-
-# Evaluation
-evaluation = WithinSessionEvaluation(
-    paradigm=paradigm,
-    datasets=[dataset],
-    overwrite=True
-)
-
-results = evaluation.process(pipelines)
-print(results.groupby("pipeline")[["score"]].describe())
-`;
-    const blob = new Blob([script], { type: "text/x-python" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `eeg_bench_${datasetName.toLowerCase()}_reproduce.py`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleShowMethods = async () => {
+    if (!showMethods && !methodsText && jobId) {
+      try {
+        const text = await getMethodsParagraph(jobId);
+        setMethodsText(text);
+        setMethodsError(null);
+      } catch {
+        setMethodsError("Could not fetch methods paragraph from backend.");
+      }
+    }
+    setShowMethods(!showMethods);
   };
+
+  const handleDownloadScript = async () => {
+    if (!jobId) return;
+    try {
+      const script = await getReproducibleScript(jobId);
+      const blob = new Blob([script], { type: "text/x-python" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `eeg_bench_${datasetName.toLowerCase()}_reproduce.py`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Fallback: generate a minimal script client-side with honest labeling
+      alert("Could not fetch the reproducible script from the backend. Ensure the backend is running and the job has completed.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <svg className="animate-spin h-8 w-8 text-accent" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+          <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75" />
+        </svg>
+        <p className="text-sm text-text-secondary">Loading benchmark results...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-2xl px-6 py-24 text-center">
+        <div className="p-6 bg-red-50 rounded-xl border border-red-200">
+          <h2 className="text-lg font-medium text-red-900">Failed to Load Results</h2>
+          <p className="mt-2 text-sm text-red-700">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 btn btn-outline text-sm px-4 py-2"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       {isSample && (
         <OfflineBanner
           message={
-            isBackendOffline()
-              ? "GCP backend offline — displaying sample benchmark results for BNCI2014_001."
-              : "Displaying sample benchmark results for BNCI2014_001."
+            dataSource === "cached_offline"
+              ? "Backend offline — displaying cached precomputed results (generated 2026-08-03). These may not reflect a live run."
+              : isBackendOffline()
+                ? "GCP backend offline — displaying cached benchmark results."
+                : "Displaying cached benchmark data."
           }
         />
       )}
@@ -168,6 +210,11 @@ print(results.groupby("pipeline")[["score"]].describe())
           <span className="hover:text-text-primary cursor-pointer">Results</span>
           <span className="mx-2">›</span>
           <span className="font-data text-text-primary">{datasetName}</span>
+          {dataSource && (
+            <span className="ml-3 px-2 py-0.5 rounded bg-slate-100 text-[10px] font-data text-slate-600 border border-slate-200">
+              {dataSource === "live" ? "Live Run" : dataSource === "cached_offline" ? "Cached — Offline" : dataSource}
+            </span>
+          )}
         </nav>
 
         {/* Title */}
@@ -177,28 +224,36 @@ print(results.groupby("pipeline")[["score"]].describe())
         <p className="font-data text-sm text-text-secondary mt-2">{datasetName}</p>
 
         {/* Pipeline cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-          {pipelineResults.map((p) => (
-            <PipelineCard
-              key={p.name}
-              name={p.name}
-              description={p.description}
-              accuracy={p.accuracy}
-              ci={p.ci}
-              auc={p.auc}
-              aucCi={p.aucCi}
-            />
-          ))}
-        </div>
+        {pipelineResults.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+            {pipelineResults.map((p) => (
+              <PipelineCard
+                key={p.name}
+                name={p.name}
+                description={p.description}
+                accuracy={p.accuracy}
+                ci={p.ci}
+                auc={p.auc}
+                aucCi={p.aucCi}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-8 p-6 bg-slate-50 rounded-xl border border-border text-center text-sm text-text-secondary">
+            No pipeline results available for this job.
+          </div>
+        )}
 
         {/* MOABB comparison + Subject table */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-8">
-          <MoabbComparison subjects={subjects} />
-          <SubjectTable
-            subjects={subjects}
-            pipelines={pipelineResults.map((p) => p.name)}
-          />
-        </div>
+        {subjects.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-8">
+            <MoabbComparison subjects={subjects} />
+            <SubjectTable
+              subjects={subjects}
+              pipelines={pipelineResults.map((p) => p.name)}
+            />
+          </div>
+        )}
 
         {/* Export actions */}
         <div className="mt-10 flex flex-col sm:flex-row gap-3">
@@ -226,7 +281,7 @@ print(results.groupby("pipeline")[["score"]].describe())
         {/* Methods preview */}
         <div className="mt-6">
           <button
-            onClick={() => setShowMethods(!showMethods)}
+            onClick={handleShowMethods}
             className="text-sm text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
           >
             <svg
@@ -245,17 +300,25 @@ print(results.groupby("pipeline")[["score"]].describe())
 
           {showMethods && (
             <div className="mt-3 p-4 bg-surface rounded-lg">
-              <p className="text-sm text-text-secondary leading-relaxed">
-                {METHODS_TEXT}
-              </p>
+              {methodsError ? (
+                <p className="text-sm text-red-600">{methodsError}</p>
+              ) : methodsText ? (
+                <p className="text-sm text-text-secondary leading-relaxed">
+                  {methodsText}
+                </p>
+              ) : (
+                <p className="text-sm text-text-secondary italic">Loading methods paragraph...</p>
+              )}
             </div>
           )}
         </div>
 
         {/* Library versions */}
-        <p className="font-data text-xs text-text-secondary/60 mt-8 text-center">
-          {LIB_VERSIONS}
-        </p>
+        {libVersions && (
+          <p className="font-data text-xs text-text-secondary/60 mt-8 text-center">
+            {libVersions}
+          </p>
+        )}
       </div>
     </>
   );
@@ -268,3 +331,4 @@ export default function ResultsPage() {
     </Suspense>
   );
 }
+

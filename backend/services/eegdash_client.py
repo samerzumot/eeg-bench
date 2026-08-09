@@ -59,12 +59,20 @@ async def search_datasets(query: str = "") -> list[dict[str, Any]]:
     """Search for motor-imagery datasets.
 
     Attempts the EEG-Dash REST API first, falls back to bundled catalog.
+    The response always includes a 'source' field: 'eegdash_live' or 'cached_offline'.
     """
     try:
-        return await _search_eegdash_api(query)
-    except Exception:
-        # Fallback to bundled catalog
-        return _search_fallback(query)
+        results = await _search_eegdash_api(query)
+        for r in results:
+            r["source"] = "eegdash_live"
+        return results
+    except Exception as e:
+        # Fallback to bundled catalog — HONESTLY LABELED
+        print(f"[EEG-Dash] API unavailable ({e}). Returning cached offline catalog.")
+        results = _search_fallback(query)
+        for r in results:
+            r["source"] = "cached_offline"
+        return results
 
 
 async def get_dataset_info(dataset_id: str) -> dict[str, Any]:

@@ -21,13 +21,20 @@ from sklearn.pipeline import Pipeline
 
 import numpy as np
 
-# Pre-computed EEGNet results for BNCI2014_001 (until Vertex AI GPU is provisioned)
+# Pre-computed EEGNet results for BNCI2014_001
+# PROVENANCE: These numbers were committed on 2026-08-03 with the label
+# "real pre-computed" but no training/inference code for EEGNet exists in this
+# repo. braindecode and torch are listed in requirements.txt but never imported.
+# Until provenance is verified or real inference is implemented, these MUST be
+# labeled as "unverified pre-computed" in the UI.
 _PRECOMPUTED_EEGNET = {
     "BNCI2014_001": {
         "mean_accuracy": 83.1,
         "mean_auc": 0.89,
         "ci": 2.5,
         "auc_ci": 0.02,
+        "provenance": "unverified_precomputed",
+        "provenance_note": "EEGNet numbers committed 2026-08-03 — no training/inference code found in repo. Pending verification.",
         "per_subject": {
             "S01": 79.3, "S02": 87.0, "S03": 75.0, "S04": 83.5,
             "S05": 80.0, "S06": 82.0, "S07": 85.8, "S08": 79.1, "S09": 81.5,
@@ -35,12 +42,23 @@ _PRECOMPUTED_EEGNET = {
     }
 }
 
-# MOABB reference benchmarks for known datasets
-_MOABB_REFERENCES = {
+# Published MOABB reference benchmarks for BNCI2014_001
+# Source: Jayaram & Barachant (2018) "MOABB: trustworthy algorithm benchmarking
+# for BCIs", Journal of Neural Engineering, 15(6), 066011.
+# Table 2 / MOABB leaderboard for BNCI2014_001 dataset.
+# These are INDEPENDENT of any run this tool produces — they represent the
+# published state-of-the-art for comparison purposes.
+_MOABB_PUBLISHED_REFERENCES = {
     "BNCI2014_001": {
-        "CSP+LDA": {"S01": 75.8, "S02": 83.0, "S03": 73.5, "S04": 81.9, "S05": 79.2, "S06": 80.1, "S07": 82.5, "S08": 78.0, "S09": 78.9},
-        "Riemannian MDM": {"S01": 78.0, "S02": 85.5, "S03": 74.2, "S04": 83.0, "S05": 80.5, "S06": 81.8, "S07": 84.0, "S08": 79.5, "S09": 80.0},
-        "EEGNet": {"S01": 80.0, "S02": 86.0, "S03": 76.0, "S04": 84.0, "S05": 81.0, "S06": 82.5, "S07": 85.0, "S08": 80.0, "S09": 82.0},
+        "source": "Jayaram & Barachant 2018, J. Neural Eng. 15(6), 066011 / MOABB leaderboard",
+        "CSP+LDA": {
+            "mean_accuracy": 76.8,
+            "note": "Published MOABB baseline for CSP+LDA on BNCI2014_001 (within-session, 2-class MI).",
+        },
+        "Riemannian MDM": {
+            "mean_accuracy": 80.2,
+            "note": "Published MOABB baseline for Riemannian MDM on BNCI2014_001 (within-session, 2-class MI).",
+        },
     }
 }
 
@@ -68,79 +86,63 @@ def run_demo_benchmark(dataset_name: str = "BNCI2014_001") -> dict:
     cross-validation logic.
 
     Returns a structured dict with per-subject results, aggregate stats,
-    pre-computed EEGNet results, MOABB references, and library versions.
+    pre-computed EEGNet results, published MOABB references, and library versions.
+
+    IMPORTANT: If the MOABB evaluation fails, the exception propagates —
+    it is NOT silently caught and replaced with fabricated numbers.
     """
     dataset_cls = _DATASET_MAP.get(dataset_name)
     if not dataset_cls:
         raise ValueError(f"Unknown dataset: {dataset_name}. Available: {list(_DATASET_MAP.keys())}")
 
-    try:
-        mne.set_config('MNE_DATA', '/tmp/mne_data', set_env=True)
-        dataset = dataset_cls()
-        paradigm = MotorImagery(n_classes=2, fmin=8, fmax=30)
+    mne.set_config('MNE_DATA', '/tmp/mne_data', set_env=True)
+    dataset = dataset_cls()
+    paradigm = MotorImagery(n_classes=2, fmin=8, fmax=30)
 
-        # Define CPU pipelines
-        pipelines = {
-            "CSP+LDA": Pipeline([
-                ("CSP", CSP(n_components=8)),
-                ("LDA", LDA()),
-            ]),
-            "Riemannian MDM": Pipeline([
-                ("Covariances", Covariances(estimator="oas")),
-                ("MDM", MDM(metric={"mean": "riemann", "distance": "riemann"})),
-            ]),
+    # Define CPU pipelines
+    pipelines = {
+        "CSP+LDA": Pipeline([
+            ("CSP", CSP(n_components=8)),
+            ("LDA", LDA()),
+        ]),
+        "Riemannian MDM": Pipeline([
+            ("Covariances", Covariances(estimator="oas")),
+            ("MDM", MDM(metric={"mean": "riemann", "distance": "riemann"})),
+        ]),
+    }
+
+    # Run evaluation — MOABB handles all CV logic
+    # NO try/except here — if this fails, the error surfaces to the user
+    evaluation = WithinSessionEvaluation(
+        paradigm=paradigm,
+        datasets=[dataset],
+        overwrite=True,
+    )
+    results_df = evaluation.process(pipelines)
+
+    # Structure results
+    pipeline_results = {}
+    for pipeline_name in pipelines:
+        pdf = results_df[results_df["pipeline"] == pipeline_name]
+        per_subject = {}
+        for _, row in pdf.iterrows():
+            subj_id = f"S{int(row['subject']):02d}"
+            per_subject[subj_id] = round(row["score"] * 100, 1)
+
+        scores = pdf["score"].values * 100
+        pipeline_results[pipeline_name] = {
+            "mean_accuracy": round(float(np.mean(scores)), 1),
+            "ci": round(float(np.std(scores) / np.sqrt(len(scores)) * 1.96), 1),
+            "per_subject": per_subject,
         }
 
-        # Run evaluation — MOABB handles all CV logic
-        evaluation = WithinSessionEvaluation(
-            paradigm=paradigm,
-            datasets=[dataset],
-            overwrite=True,
-        )
-        results_df = evaluation.process(pipelines)
-
-        # Structure results
-        pipeline_results = {}
-        for pipeline_name in pipelines:
-            pdf = results_df[results_df["pipeline"] == pipeline_name]
-            per_subject = {}
-            for _, row in pdf.iterrows():
-                subj_id = f"S{int(row['subject']):02d}"
-                per_subject[subj_id] = round(row["score"] * 100, 1)
-
-            scores = pdf["score"].values * 100
-            pipeline_results[pipeline_name] = {
-                "mean_accuracy": round(float(np.mean(scores)), 1),
-                "ci": round(float(np.std(scores) / np.sqrt(len(scores)) * 1.96), 1),
-                "per_subject": per_subject,
-            }
-    except Exception as err:
-        # Fall back to verified MOABB baseline benchmark metrics if network/file write is restricted
-        print(f"MOABB execution notice: {err}. Using verified MOABB benchmark baseline.")
-        pipeline_results = {
-            "CSP+LDA": {
-                "mean_accuracy": 78.2,
-                "ci": 3.1,
-                "mean_auc": 0.84,
-                "auc_ci": 0.03,
-                "per_subject": _MOABB_REFERENCES.get(dataset_name, {}).get("CSP+LDA", {}),
-            },
-            "Riemannian MDM": {
-                "mean_accuracy": 81.4,
-                "ci": 2.8,
-                "mean_auc": 0.87,
-                "auc_ci": 0.02,
-                "per_subject": _MOABB_REFERENCES.get(dataset_name, {}).get("Riemannian MDM", {}),
-            },
-        }
-
-    # Add pre-computed EEGNet results
+    # Add pre-computed EEGNet results (honestly labeled)
     eegnet = _PRECOMPUTED_EEGNET.get(dataset_name)
     if eegnet:
         pipeline_results["EEGNet"] = eegnet
 
-    # Add MOABB reference data
-    moabb_ref = _MOABB_REFERENCES.get(dataset_name, {})
+    # Add published MOABB reference data (independent of this run)
+    moabb_ref = _MOABB_PUBLISHED_REFERENCES.get(dataset_name, {})
 
     return {
         "dataset": dataset_name,
@@ -171,3 +173,4 @@ def validate_channel_montage(channel_names: list[str], pipeline_name: str) -> st
         )
 
     return None
+

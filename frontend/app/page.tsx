@@ -11,6 +11,7 @@ export default function Home() {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [email, setEmail] = useState("");
+  const [areaOfInterest, setAreaOfInterest] = useState("Clinical Trial Partnership");
 
   // TopoMap state for Pillar 3
   const [topoValues, setTopoValues] = useState<Record<string, number>>({
@@ -53,13 +54,17 @@ export default function Home() {
     e.preventDefault();
     if (!email) return;
     try {
-      await fetch("/api/submissions", {
+      await fetch("https://formsubmit.co/ajax/srzumot@gmail.com", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify({
-          email,
+          subject: "New Website Submission - bniAdam AI Lab",
+          email: email,
           type: "lab_access_inquiry",
-          recipient: "srzumot@gmail.com",
+          area_of_interest: areaOfInterest,
         }),
       });
     } catch (err) {
@@ -311,7 +316,7 @@ export default function Home() {
                   <div>
                     <div className="flex items-center justify-between text-xs font-data text-text-secondary mb-2">
                       <span>VISUALIZER: ANOMALY TOPOGRAPHY DETECTOR</span>
-                      <span className="text-accent animate-pulse font-semibold">LIVE FEED</span>
+                      <span className="text-slate-500 font-semibold">SIMULATED</span>
                     </div>
 
                     {/* Integrated Live Topography Map */}
@@ -430,15 +435,7 @@ export default function Home() {
       {/* Medical & Scientific Standards Bar */}
       <section className="border-y border-border bg-white py-16 relative">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div className="group">
-              <p className="text-3xl md:text-4xl font-light text-accent font-data group-hover:scale-105 transition-transform duration-300">
-                100%
-              </p>
-              <p className="mt-2 text-xs text-text-secondary font-medium">
-                De-Identified Data Pipeline
-              </p>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
             <div className="group">
               <p className="text-3xl md:text-4xl font-light text-accent font-data group-hover:scale-105 transition-transform duration-300">
                 3
@@ -449,10 +446,10 @@ export default function Home() {
             </div>
             <div className="group">
               <p className="text-3xl md:text-4xl font-light text-accent font-data group-hover:scale-105 transition-transform duration-300">
-                &lt; 50ms
+                Real-time
               </p>
               <p className="mt-2 text-xs text-text-secondary font-medium">
-                Inference Latency
+                Target Inference Latency
               </p>
             </div>
             <div className="group">
@@ -525,7 +522,11 @@ export default function Home() {
               <label className="block text-xs font-medium text-text-primary mb-1">
                 Area of Interest
               </label>
-              <select className="w-full px-3.5 py-2 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:border-accent text-text-primary">
+              <select
+                value={areaOfInterest}
+                onChange={(e) => setAreaOfInterest(e.target.value)}
+                className="w-full px-3.5 py-2 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:border-accent text-text-primary"
+              >
                 <option>Clinical Trial Partnership</option>
                 <option>EEG-Bench Dataset Integration</option>
                 <option>bniAdam-1 Foundation Model Access</option>

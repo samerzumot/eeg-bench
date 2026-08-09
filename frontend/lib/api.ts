@@ -3,7 +3,9 @@
 /**
  * EEG-Bench API Client
  * Connects Next.js frontend to GCP Cloud Run Backend service.
- * Standardizes fallbacks with explicit sample data flags when offline.
+ *
+ * HARD RULE: No silent substitution. If the backend is unreachable,
+ * fallback data is labeled as cached/offline and isSample is set to true.
  */
 
 export const GCP_BACKEND_URL =
@@ -17,12 +19,16 @@ export interface JobStatusResponse {
   results?: any;
   error?: string;
   isSample?: boolean;
+  /** Describes the source of the data: "live", "cached_offline", "precomputed" */
+  dataSource?: string;
 }
 
 export interface BenchmarkResultsResponse {
   job_id: string;
   dataset: string;
   isSample?: boolean;
+  /** Describes the source of the data: "live", "cached_offline", "precomputed" */
+  dataSource?: string;
   results: {
     pipelines: Record<
       string,
@@ -80,24 +86,42 @@ export function isBackendOffline(): boolean {
 /** Check GCP backend health */
 export async function checkBackendHealth(): Promise<{ status: string; isSample?: boolean; versions?: any }> {
   try {
-    const res = await fetch(`${GCP_BACKEND_URL}/api/health`);
+    const res = await fetch(`${GCP_BACKEND_URL}/api/health`, { signal: AbortSignal.timeout(8000) });
     if (res.ok) {
       backendOffline = false;
       return await res.json();
     }
+    // Non-OK response — backend is reachable but unhealthy
+    backendOffline = true;
+    return { status: "unhealthy", isSample: true, versions: precomputedResults.results.library_versions };
+  } catch {
+    backendOffline = true;
+    return { status: "offline", isSample: true, versions: precomputedResults.results.library_versions };
+  }
+}
+
+/** Start live demo benchmark via the real FastAPI backend */
+export async function startDemoBenchmark(dataset: string = "BNCI2014_001"): Promise<{ job_id: string; status: string; isSample?: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${GCP_BACKEND_URL}/api/benchmark/demo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataset }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.ok) {
+      backendOffline = false;
+      return await res.json();
+    }
+    const errBody = await res.text().catch(() => "Unknown error");
+    throw new Error(`Backend returned ${res.status}: ${errBody}`);
   } catch (e) {
     backendOffline = true;
+    throw new Error(`Failed to start benchmark: ${e instanceof Error ? e.message : String(e)}`);
   }
-  backendOffline = false;
-  return { status: "ok", isSample: false, versions: precomputedResults.results.library_versions };
 }
 
-/** Start live demo benchmark — returns stored real benchmark run immediately */
-export async function startDemoBenchmark(dataset: string = "BNCI2014_001"): Promise<{ job_id: string; status: string; isSample?: boolean }> {
-  return { job_id: "real-job-bnci2014-001", status: "complete", isSample: false };
-}
-
-/** Start custom benchmark job — returns stored real benchmark run immediately */
+/** Start custom benchmark job via the real FastAPI backend */
 export async function startCustomBenchmark(config: {
   dataset_id?: string;
   upload_id?: string;
@@ -105,33 +129,109 @@ export async function startCustomBenchmark(config: {
   montage?: string;
   sampling_rate?: number;
   attested?: boolean;
-}): Promise<{ job_id: string; status: string; isSample?: boolean }> {
-  return { job_id: "real-custom-job-001", status: "complete", isSample: false };
+}): Promise<{ job_id: string; status: string; isSample?: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${GCP_BACKEND_URL}/api/benchmark/custom`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.ok) {
+      backendOffline = false;
+      return await res.json();
+    }
+    const errBody = await res.text().catch(() => "Unknown error");
+    throw new Error(`Backend returned ${res.status}: ${errBody}`);
+  } catch (e) {
+    backendOffline = true;
+    throw new Error(`Failed to start custom benchmark: ${e instanceof Error ? e.message : String(e)}`);
+  }
 }
 
-/** Poll benchmark job status — returns complete status immediately for stored real runs */
+/** Poll benchmark job status — actually polls the backend until complete or error */
 export async function pollJobStatus(
   jobId: string,
-  maxAttempts: number = 60,
-  intervalMs: number = 1000
+  maxAttempts: number = 120,
+  intervalMs: number = 2000
 ): Promise<JobStatusResponse> {
-  return {
-    job_id: jobId,
-    status: "complete",
-    dataset: "BNCI2014_001",
-    isSample: false,
-    results: precomputedResults.results,
-  };
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const res = await fetch(`${GCP_BACKEND_URL}/api/benchmark/${jobId}/status`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) {
+        throw new Error(`Status check returned ${res.status}`);
+      }
+      backendOffline = false;
+      const data = await res.json();
+
+      if (data.status === "complete" || data.status === "error" || data.status === "not_found") {
+        return { ...data, isSample: false, dataSource: "live" };
+      }
+
+      // Still running — wait and retry
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    } catch (e) {
+      // On the last attempt, throw so the caller shows an error
+      if (attempt >= maxAttempts - 1) {
+        backendOffline = true;
+        throw new Error(`Lost connection while polling job ${jobId}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      // Otherwise, wait a bit longer and retry (transient network issue)
+      await new Promise((resolve) => setTimeout(resolve, intervalMs * 2));
+    }
+  }
+  throw new Error(`Job ${jobId} did not complete within ${maxAttempts * intervalMs / 1000}s`);
 }
 
-/** Fetch live benchmark results — pulls stored real results without calling backend */
+/** Fetch benchmark results from the real backend */
 export async function getBenchmarkResults(jobId: string): Promise<BenchmarkResultsResponse> {
-  return {
-    job_id: jobId || "real-job-bnci2014-001",
-    dataset: precomputedResults.dataset || "BNCI2014_001",
-    isSample: false,
-    results: precomputedResults.results,
-  };
+  try {
+    const res = await fetch(`${GCP_BACKEND_URL}/api/results/${jobId}`, {
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.ok) {
+      backendOffline = false;
+      const data = await res.json();
+      return { ...data, isSample: false, dataSource: "live" };
+    }
+    throw new Error(`Results endpoint returned ${res.status}`);
+  } catch (e) {
+    // Fallback: return precomputed results, but HONESTLY LABELED
+    backendOffline = true;
+    console.warn(`[EEG-Bench] Failed to fetch results for job ${jobId}, falling back to cached precomputed results:`, e);
+    return {
+      job_id: jobId || "cached-precomputed",
+      dataset: precomputedResults.dataset || "BNCI2014_001",
+      isSample: true,
+      dataSource: "cached_offline",
+      results: precomputedResults.results,
+    };
+  }
+}
+
+/** Fetch the reproducible Python script from the backend */
+export async function getReproducibleScript(jobId: string): Promise<string> {
+  const res = await fetch(`${GCP_BACKEND_URL}/api/results/${jobId}/script`, {
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch script: ${res.status}`);
+  }
+  return await res.text();
+}
+
+/** Fetch the auto-generated methods paragraph from the backend */
+export async function getMethodsParagraph(jobId: string): Promise<string> {
+  const res = await fetch(`${GCP_BACKEND_URL}/api/results/${jobId}/methods`, {
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch methods: ${res.status}`);
+  }
+  const data = await res.json();
+  return data.methods;
 }
 
 /** Upload EEG recording to GCP Cloud Run Clinician Pipeline */
@@ -152,8 +252,11 @@ export async function uploadClinicianEeg(
       method: "POST",
       body: formData,
     });
-    if (res.ok) return await res.json();
-  } catch (e) {
+    if (res.ok) {
+      backendOffline = false;
+      return await res.json();
+    }
+  } catch {
     backendOffline = true;
   }
   return { report_id: "demo", status: "complete", message: "Recording analyzed successfully", isSample: true };
@@ -163,8 +266,11 @@ export async function uploadClinicianEeg(
 export async function getClinicianReport(reportId: string): Promise<ClinicianReportData> {
   try {
     const res = await fetch(`${GCP_BACKEND_URL}/api/clinician/report/${reportId}`);
-    if (res.ok) return await res.json();
-  } catch (e) {
+    if (res.ok) {
+      backendOffline = false;
+      return await res.json();
+    }
+  } catch {
     backendOffline = true;
   }
   return {

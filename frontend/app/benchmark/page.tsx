@@ -8,7 +8,8 @@ import { EegTrace } from "@/components/EegTrace";
 import { PipelineTooltip } from "@/components/PipelineTooltip";
 import { SampleDetailModal } from "@/components/SampleDetailModal";
 
-import { startDemoBenchmark, pollJobStatus } from "@/lib/api";
+import { startDemoBenchmark, pollJobStatus, isBackendOffline } from "@/lib/api";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 // Sample data — fallback when backend is offline
 const SAMPLE_PIPELINES: PipelineResult[] = [
@@ -28,23 +29,55 @@ export default function BenchmarkPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [activeStepModal, setActiveStepModal] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleRunBenchmark = async () => {
     setIsRunning(true);
+    setError(null);
     try {
       const demoResp = await startDemoBenchmark("BNCI2014_001");
-      await pollJobStatus(demoResp.job_id);
+      const statusResp = await pollJobStatus(demoResp.job_id);
+      if (statusResp.status === "error") {
+        throw new Error(statusResp.error || "Benchmark failed on the backend.");
+      }
       setIsRunning(false);
       setShowResults(true);
       router.push(`/results?jobId=${demoResp.job_id}`);
     } catch (err) {
       setIsRunning(false);
-      router.push(`/results?jobId=demo-job-001`);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to connect to the benchmark backend. Please check your connection and try again."
+      );
     }
   };
 
   return (
     <>
+      {/* Offline / Error banners */}
+      {isBackendOffline() && (
+        <OfflineBanner message="Backend is currently unreachable. Benchmark execution requires a live backend connection." />
+      )}
+
+      {error && (
+        <div className="bg-red-50 border-b border-red-200 py-3 px-6">
+          <div className="mx-auto max-w-6xl flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-red-800">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="font-medium">Benchmark Error:</span>
+              <span>{error}</span>
+            </div>
+            <button
+              onClick={() => { setError(null); handleRunBenchmark(); }}
+              className="text-xs font-semibold text-red-700 hover:text-red-900 px-3 py-1 rounded border border-red-300 hover:bg-red-100 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="border-b border-border bg-surface/60 py-2 px-6">
         <div className="mx-auto max-w-6xl flex items-center justify-between text-xs text-text-secondary font-data">
