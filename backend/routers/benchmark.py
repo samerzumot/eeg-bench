@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Benchmark API router — handles demo and custom benchmark requests."""
 
 import uuid

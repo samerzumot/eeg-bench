@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """MOABB pipeline runner — executes CSP+LDA and Riemannian MDM via MOABB's own evaluation.
 
 This is the core of EEG-Bench. It uses MOABB's APIs directly — no reimplementation
@@ -97,7 +99,7 @@ def run_demo_benchmark(dataset_name: str = "BNCI2014_001") -> dict:
 
     mne.set_config('MNE_DATA', '/tmp/mne_data', set_env=True)
     dataset = dataset_cls()
-    paradigm = MotorImagery(n_classes=2, fmin=8, fmax=30)
+    paradigm = MotorImagery(events=["left_hand", "right_hand"], n_classes=2, fmin=8, fmax=30)
 
     # Define CPU pipelines
     pipelines = {
