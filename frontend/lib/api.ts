@@ -166,7 +166,7 @@ export async function pollJobStatus(
       backendOffline = false;
       const data = await res.json();
 
-      if (data.status === "complete" || data.status === "error" || data.status === "not_found") {
+      if (data.status === "complete" || data.status === "error") {
         return { ...data, isSample: false, dataSource: "live" };
       }
 

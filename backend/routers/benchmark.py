@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import uuid
 import asyncio
+import os
+import json
 from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel
 
@@ -11,8 +13,41 @@ from services.moabb_runner import run_demo_benchmark
 
 router = APIRouter()
 
-# In-memory job store (will migrate to Firestore)
+# Local disk persistence directory for job states (survives container restarts)
+JOBS_DIR = "/tmp/eegbench_jobs"
+os.makedirs(JOBS_DIR, exist_ok=True)
+
+# In-memory job store
 _jobs: dict[str, dict] = {}
+
+
+def save_job(job_id: str, data: dict):
+    """Save job state to memory and local disk."""
+    _jobs[job_id] = data
+    try:
+        filepath = os.path.join(JOBS_DIR, f"{job_id}.json")
+        with open(filepath, "w") as f:
+            json.dump(data, f)
+    except Exception as e:
+        print(f"[Jobs] Failed to persist job {job_id} to disk: {e}")
+
+
+def get_job(job_id: str) -> dict | None:
+    """Retrieve job state from memory or local disk."""
+    if job_id in _jobs:
+        return _jobs[job_id]
+
+    filepath = os.path.join(JOBS_DIR, f"{job_id}.json")
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "r") as f:
+                data = json.load(f)
+                _jobs[job_id] = data
+                return data
+        except Exception:
+            pass
+
+    return None
 
 
 class DemoRequest(BaseModel):
@@ -34,7 +69,8 @@ class CustomRequest(BaseModel):
 async def start_demo(request: DemoRequest, background_tasks: BackgroundTasks):
     """Start the live demo benchmark using a pre-loaded MOABB dataset."""
     job_id = str(uuid.uuid4())[:8]
-    _jobs[job_id] = {"status": "running", "dataset": request.dataset, "results": None}
+    job_data = {"status": "running", "dataset": request.dataset, "results": None}
+    save_job(job_id, job_data)
 
     background_tasks.add_task(_run_demo_job, job_id, request.dataset)
 
@@ -48,13 +84,15 @@ async def start_custom(request: CustomRequest, background_tasks: BackgroundTasks
         return {"error": "Attestation required for uploaded data."}
 
     job_id = str(uuid.uuid4())[:8]
-    _jobs[job_id] = {
+    dataset_name = request.dataset_id or request.upload_id or "BNCI2014_001"
+    job_data = {
         "status": "running",
-        "dataset": request.dataset_id or request.upload_id,
+        "dataset": dataset_name,
         "results": None,
     }
+    save_job(job_id, job_data)
 
-    background_tasks.add_task(_run_demo_job, job_id, request.dataset_id or "BNCI2014_001")
+    background_tasks.add_task(_run_demo_job, job_id, dataset_name)
 
     return {"job_id": job_id, "status": "running"}
 
@@ -62,7 +100,7 @@ async def start_custom(request: CustomRequest, background_tasks: BackgroundTasks
 @router.get("/{job_id}/status")
 async def get_status(job_id: str):
     """Poll job status."""
-    job = _jobs.get(job_id)
+    job = get_job(job_id)
     if not job:
         return {"error": "Job not found", "status": "not_found"}
     return {"job_id": job_id, "status": job["status"]}
@@ -72,6 +110,7 @@ async def _run_demo_job(job_id: str, dataset_name: str):
     """Background task: run the benchmark and store results."""
     try:
         results = await asyncio.to_thread(run_demo_benchmark, dataset_name)
-        _jobs[job_id] = {"status": "complete", "dataset": dataset_name, "results": results}
+        save_job(job_id, {"status": "complete", "dataset": dataset_name, "results": results})
     except Exception as e:
-        _jobs[job_id] = {"status": "error", "dataset": dataset_name, "error": str(e)}
+        save_job(job_id, {"status": "error", "dataset": dataset_name, "error": str(e)})
+

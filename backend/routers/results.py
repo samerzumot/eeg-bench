@@ -8,15 +8,14 @@ from services.methods_generator import generate_methods
 
 router = APIRouter()
 
-# Shares the in-memory job store with benchmark router
-# (will migrate to Firestore)
-from routers.benchmark import _jobs
+# Use disk-backed get_job from benchmark router
+from routers.benchmark import get_job
 
 
 @router.get("/{job_id}")
 async def get_results(job_id: str):
     """Get full benchmark results for a job."""
-    job = _jobs.get(job_id)
+    job = get_job(job_id)
     if not job:
         return {"error": "Job not found"}
     if job["status"] != "complete":
@@ -31,7 +30,7 @@ async def get_results(job_id: str):
 @router.get("/{job_id}/script")
 async def get_script(job_id: str):
     """Download the reproducible Python script."""
-    job = _jobs.get(job_id)
+    job = get_job(job_id)
     if not job or job["status"] != "complete":
         return {"error": "Results not available"}
 
@@ -49,7 +48,7 @@ async def get_script(job_id: str):
 @router.get("/{job_id}/methods")
 async def get_methods(job_id: str):
     """Get the auto-generated methods paragraph."""
-    job = _jobs.get(job_id)
+    job = get_job(job_id)
     if not job or job["status"] != "complete":
         return {"error": "Results not available"}
 
@@ -58,3 +57,4 @@ async def get_methods(job_id: str):
         results=job["results"],
     )
     return {"methods": methods}
+
