@@ -312,3 +312,95 @@ export async function getClinicianReport(reportId: string): Promise<ClinicianRep
     ],
   };
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Resolution Recovery Track API
+// ═══════════════════════════════════════════════════════════════════════════
+
+import precomputedResolutionResults from "./precomputed_resolution_results.json";
+
+export interface ResolutionRecoveryModelResult {
+  correlation_r: number;
+  rmse_uv: number;
+  snr_improvement_db: number;
+  param_count?: number;
+  provenance?: string;
+  provenance_note?: string;
+  description?: string;
+}
+
+export interface ResolutionRecoveryResultsResponse {
+  job_id: string;
+  dataset: string;
+  task: string;
+  isSample?: boolean;
+  dataSource?: string;
+  results: {
+    models: Record<string, ResolutionRecoveryModelResult>;
+    data_spec?: {
+      input_channels: number;
+      output_channels: number;
+      sampling_rate_hz: number;
+      data_source: string;
+    };
+    metrics_description?: Record<string, string>;
+  };
+}
+
+/** Start resolution recovery demo benchmark */
+export async function startResolutionRecoveryDemo(
+  dataset: string = "synthetic_placeholder"
+): Promise<{ job_id: string; status: string; isSample?: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${GCP_BACKEND_URL}/api/resolution-recovery/demo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataset }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.ok) {
+      backendOffline = false;
+      return await res.json();
+    }
+    const errBody = await res.text().catch(() => "Unknown error");
+    throw new Error(`Backend returned ${res.status}: ${errBody}`);
+  } catch (e) {
+    backendOffline = true;
+    // Return a fake completed job with precomputed results
+    return { job_id: "rr-offline", status: "complete", isSample: true };
+  }
+}
+
+/** Fetch resolution recovery benchmark results */
+export async function getResolutionRecoveryResults(
+  jobId: string
+): Promise<ResolutionRecoveryResultsResponse> {
+  try {
+    const res = await fetch(`${GCP_BACKEND_URL}/api/resolution-recovery/${jobId}/results`, {
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.ok) {
+      backendOffline = false;
+      const data = await res.json();
+      return { ...data, isSample: false, dataSource: "live" };
+    }
+    throw new Error(`Results endpoint returned ${res.status}`);
+  } catch (e) {
+    // Fallback: return precomputed results, HONESTLY LABELED
+    backendOffline = true;
+    console.warn(
+      `[EEG-Bench] Failed to fetch resolution recovery results for job ${jobId}, falling back to cached:`,
+      e
+    );
+    return {
+      job_id: jobId || "rr-cached-precomputed",
+      dataset: precomputedResolutionResults.dataset || "synthetic_placeholder",
+      task: "resolution_recovery",
+      isSample: true,
+      dataSource: "cached_offline",
+      results: precomputedResolutionResults.results,
+    };
+  }
+}
+

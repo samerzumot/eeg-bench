@@ -355,7 +355,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Card A: EEG-Bench */}
           <div className="p-8 rounded-3xl bg-white border border-border hover:border-accent/30 hover:shadow-md transition-all duration-300 flex flex-col justify-between group">
             <div>
@@ -393,7 +393,38 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Card B: Clinician Suite */}
+          {/* Card B: Resolution Recovery Track */}
+          <div className="p-8 rounded-3xl bg-white border border-border hover:border-indigo-300/40 hover:shadow-md transition-all duration-300 flex flex-col justify-between group">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-data border border-indigo-100">
+                  New Track
+                </span>
+                <span className="text-xs font-data text-text-secondary">Signal → Signal</span>
+              </div>
+              <h3 className="mt-6 text-2xl font-light text-text-primary group-hover:text-indigo-600 transition-colors">
+                Resolution Recovery
+              </h3>
+              <p className="mt-3 text-sm text-text-secondary leading-relaxed">
+                Can computational models recover the spatial and temporal detail of intracranial or MEG recordings from standard scalp EEG? This track evaluates signal-to-signal reconstruction fidelity.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2 text-[10px] font-data text-text-secondary">
+                <span className="px-2 py-1 bg-slate-50 rounded border border-border">Signal Reconstruction</span>
+                <span className="px-2 py-1 bg-slate-50 rounded border border-border">Paired Data</span>
+                <span className="px-2 py-1 bg-slate-50 rounded border border-border">SNR Improvement</span>
+              </div>
+            </div>
+            <div className="mt-10 flex items-center gap-4">
+              <Link
+                href="/benchmark"
+                className="btn btn-outline rounded-full text-xs px-5 py-2.5 font-semibold bg-white border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+              >
+                View Track →
+              </Link>
+            </div>
+          </div>
+
+          {/* Card C: Clinician Suite */}
           <div className="p-8 rounded-3xl bg-white border border-border hover:border-accent/30 hover:shadow-md transition-all duration-300 flex flex-col justify-between group">
             <div>
               <div className="flex items-center justify-between">

@@ -4,7 +4,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import benchmark, results, datasets, upload, clinician
+from routers import benchmark, results, datasets, upload, clinician, resolution_recovery
 
 app = FastAPI(
     title="EEG-Bench API",
@@ -31,6 +31,7 @@ app.include_router(results.router, prefix="/api/results", tags=["results"])
 app.include_router(datasets.router, prefix="/api/datasets", tags=["datasets"])
 app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
 app.include_router(clinician.router)
+app.include_router(resolution_recovery.router, prefix="/api/resolution-recovery", tags=["resolution-recovery"])
 
 
 @app.get("/api/health")

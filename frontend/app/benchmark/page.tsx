@@ -7,6 +7,10 @@ import { BenchmarkBars, type PipelineResult } from "@/components/BenchmarkBars";
 import { EegTrace } from "@/components/EegTrace";
 import { PipelineTooltip } from "@/components/PipelineTooltip";
 import { SampleDetailModal } from "@/components/SampleDetailModal";
+import {
+  ResolutionRecoveryLeaderboard,
+  type ResolutionRecoveryModel,
+} from "@/components/ResolutionRecoveryLeaderboard";
 
 import { startDemoBenchmark, pollJobStatus, isBackendOffline } from "@/lib/api";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -24,13 +28,35 @@ const PIPELINE_DESCRIPTIONS: Record<string, string> = {
   "EEGNet": "Compact convolutional neural network designed for EEG signals.",
 };
 
+// Resolution Recovery baseline leaderboard data
+const RESOLUTION_RECOVERY_MODELS: ResolutionRecoveryModel[] = [
+  {
+    name: "Linear Regression",
+    correlationR: 0.42,
+    rmseUv: 18.7,
+    snrImprovementDb: 1.2,
+    paramCount: 160,
+    description: "Channel-to-channel multivariate linear mapping.",
+    provenance: "computed_synthetic",
+  },
+  {
+    name: "CNN Autoencoder (U-Net)",
+    correlationR: 0.68,
+    rmseUv: 11.3,
+    snrImprovementDb: 4.8,
+    paramCount: 50000,
+    description: "Small 1D U-Net-style encoder-decoder with skip connections.",
+    provenance: "placeholder_precomputed",
+  },
+];
+
 export default function BenchmarkPage() {
   const router = useRouter();
   const [isRunning, setIsRunning] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [activeStepModal, setActiveStepModal] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTrack, setActiveTrack] = useState<"mi" | "gait">("mi");
+  const [activeTrack, setActiveTrack] = useState<"mi" | "gait" | "resolution">("mi");
 
   const handleRunBenchmark = async () => {
     setIsRunning(true);
@@ -118,9 +144,129 @@ export default function BenchmarkPage() {
                 In Progress
               </span>
             </button>
+            <button
+              onClick={() => setActiveTrack("resolution")}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all font-data flex items-center gap-2 ${
+                activeTrack === "resolution"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-surface text-text-secondary hover:text-text-primary border border-border"
+              }`}
+            >
+              <span>Resolution Recovery</span>
+              <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[9px] font-bold uppercase">
+                New
+              </span>
+            </button>
           </div>
 
-          {activeTrack === "gait" ? (
+          {activeTrack === "resolution" ? (
+            <div className="max-w-3xl">
+              {/* Track Title */}
+              <h1 className="text-4xl md:text-5xl lg:text-[3.25rem] font-light tracking-tight leading-tight text-text-primary">
+                Resolution Recovery
+                <br />
+                Benchmark
+              </h1>
+
+              <p className="mt-4 text-lg text-text-secondary max-w-xl">
+                Recovering high-resolution neural structure from low-resolution sensors.
+              </p>
+
+              {/* Task Definition */}
+              <div className="mt-8 p-6 rounded-2xl bg-white border border-border">
+                <div className="flex items-center gap-2 text-xs font-data text-text-secondary mb-4">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  <span className="tracking-wider">TASK DEFINITION</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="p-4 rounded-xl bg-surface border border-border">
+                    <div className="text-[10px] font-data text-text-secondary mb-2 tracking-wider">INPUT</div>
+                    <p className="text-text-primary font-medium">Low-resolution / Broad-coverage Signal</p>
+                    <p className="text-xs text-text-secondary mt-1">e.g. 19-channel scalp EEG (10-20 montage)</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-surface border border-border flex flex-col items-center justify-center">
+                    <svg className="w-6 h-6 text-accent mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span className="text-[10px] font-data text-text-secondary">MODEL PREDICTS</span>
+                  </div>
+                  <div className="p-4 rounded-xl bg-surface border border-border">
+                    <div className="text-[10px] font-data text-text-secondary mb-2 tracking-wider">OUTPUT</div>
+                    <p className="text-text-primary font-medium">High-resolution / Narrow-coverage Signal</p>
+                    <p className="text-xs text-text-secondary mt-1">e.g. intracranial EEG or MEG-like detail</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 rounded-lg bg-indigo-50/50 border border-indigo-100 text-xs text-indigo-900 font-data leading-relaxed">
+                  <strong>Evaluation:</strong> Predicted high-res output is scored against ground-truth paired recordings using signal reconstruction fidelity metrics — not classification accuracy.
+                </div>
+              </div>
+
+              {/* Metrics Explanation */}
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  {
+                    metric: "Correlation (r)",
+                    desc: "Pearson correlation between predicted and ground-truth signals, averaged across channels. Higher is better.",
+                    icon: "📈",
+                  },
+                  {
+                    metric: "RMSE (μV)",
+                    desc: "Root mean square error between predicted and ground-truth signals. Lower is better.",
+                    icon: "📐",
+                  },
+                  {
+                    metric: "SNR Gain (dB)",
+                    desc: "Signal-to-noise ratio improvement over naive baseline (dB). Positive means better than identity mapping.",
+                    icon: "📊",
+                  },
+                ].map((m) => (
+                  <div key={m.metric} className="p-4 rounded-xl bg-white border border-border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-base">{m.icon}</span>
+                      <span className="text-xs font-semibold text-text-primary font-data">{m.metric}</span>
+                    </div>
+                    <p className="text-xs text-text-secondary leading-relaxed">{m.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Leaderboard */}
+              <div className="mt-8">
+                <ResolutionRecoveryLeaderboard
+                  models={RESOLUTION_RECOVERY_MODELS}
+                  animate={true}
+                  datasetLabel="Placeholder — Synthetic Paired Data"
+                />
+              </div>
+
+              {/* Data Spec Note */}
+              <div className="mt-6 p-4 rounded-xl bg-surface border border-border">
+                <div className="flex items-center gap-2 text-xs font-data text-text-secondary mb-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <span className="tracking-wider">PAIRED DATA SPECIFICATION</span>
+                </div>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  This track requires paired recordings: two time-aligned arrays <code className="font-data text-text-primary bg-white px-1 py-0.5 rounded border border-border">(broad, narrow)</code> per session.
+                  Input and target signals must share the same sampling rate and temporal alignment.
+                </p>
+                <p className="text-xs text-text-secondary leading-relaxed mt-2">
+                  <strong>Integration roadmap:</strong> Simultaneous EEG+MEG recordings (e.g. HCP dataset),
+                  simultaneous scalp EEG + intracranial EEG (e.g. Fedele et al. 2017),
+                  and EEG+ECoG from epilepsy monitoring (e.g. iEEG.org).
+                </p>
+              </div>
+
+              {/* Back button */}
+              <button
+                onClick={() => setActiveTrack("mi")}
+                className="mt-6 btn btn-outline text-xs font-medium px-4 py-2"
+              >
+                ← Return to Motor Imagery Benchmark
+              </button>
+            </div>
+          ) : activeTrack === "gait" ? (
             <div className="p-8 rounded-2xl bg-white border border-border max-w-2xl">
               <div className="flex items-center gap-2 text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200 text-xs font-data mb-4">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />

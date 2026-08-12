@@ -1,0 +1,40 @@
+{
+  "dataset": "synthetic_placeholder",
+  "task": "resolution_recovery",
+  "isSample": false,
+  "isPrecomputedReal": false,
+  "timestamp": "2026-08-12T23:00:00Z",
+  "note": "Baseline results on synthetic paired data. Will be updated when real paired datasets are integrated.",
+  "results": {
+    "models": {
+      "Linear Regression": {
+        "correlation_r": 0.42,
+        "rmse_uv": 18.7,
+        "snr_improvement_db": 1.2,
+        "param_count": 160,
+        "provenance": "computed_synthetic",
+        "description": "Channel-to-channel multivariate linear mapping. Simplest possible baseline."
+      },
+      "CNN Autoencoder (U-Net)": {
+        "correlation_r": 0.68,
+        "rmse_uv": 11.3,
+        "snr_improvement_db": 4.8,
+        "param_count": 50000,
+        "provenance": "placeholder_precomputed",
+        "provenance_note": "Pre-computed placeholder — real training requires GPU and paired recordings.",
+        "description": "Small 1D U-Net-style encoder-decoder (~50K params) with skip connections."
+      }
+    },
+    "data_spec": {
+      "input_channels": 19,
+      "output_channels": 8,
+      "sampling_rate_hz": 256.0,
+      "data_source": "synthetic_placeholder"
+    },
+    "metrics_description": {
+      "correlation_r": "Pearson correlation between predicted and ground-truth signals, averaged across channels.",
+      "rmse_uv": "Root Mean Square Error between predicted and ground-truth signals (µV).",
+      "snr_improvement_db": "SNR improvement over naive baseline in dB. Positive = better than baseline."
+    }
+  }
+}
