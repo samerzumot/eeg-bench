@@ -86,7 +86,7 @@ export function isBackendOffline(): boolean {
 /** Check GCP backend health */
 export async function checkBackendHealth(): Promise<{ status: string; isSample?: boolean; versions?: any }> {
   try {
-    const res = await fetch(`${GCP_BACKEND_URL}/api/health`, { signal: AbortSignal.timeout(8000) });
+    const res = await fetch(`${GCP_BACKEND_URL}/api/health`, { signal: AbortSignal.timeout(20000) });
     if (res.ok) {
       backendOffline = false;
       return await res.json();
@@ -107,7 +107,7 @@ export async function startDemoBenchmark(dataset: string = "BNCI2014_001"): Prom
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ dataset }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(45000),
     });
     if (res.ok) {
       backendOffline = false;
@@ -135,7 +135,7 @@ export async function startCustomBenchmark(config: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(config),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(45000),
     });
     if (res.ok) {
       backendOffline = false;

@@ -97,20 +97,33 @@ async def start_custom(request: CustomRequest, background_tasks: BackgroundTasks
     return {"job_id": job_id, "status": "running"}
 
 
+import traceback
+
+
 @router.get("/{job_id}/status")
 async def get_status(job_id: str):
     """Poll job status."""
     job = get_job(job_id)
     if not job:
         return {"error": "Job not found", "status": "not_found"}
-    return {"job_id": job_id, "status": job["status"]}
+    return {
+        "job_id": job_id,
+        "status": job["status"],
+        "error": job.get("error"),
+    }
 
 
 async def _run_demo_job(job_id: str, dataset_name: str):
     """Background task: run the benchmark and store results."""
     try:
+        print(f"[Benchmark] Starting benchmark job {job_id} on dataset {dataset_name}...")
         results = await asyncio.to_thread(run_demo_benchmark, dataset_name)
         save_job(job_id, {"status": "complete", "dataset": dataset_name, "results": results})
+        print(f"[Benchmark] Job {job_id} completed successfully.")
     except Exception as e:
-        save_job(job_id, {"status": "error", "dataset": dataset_name, "error": str(e)})
+        err_msg = str(e)
+        print(f"[Benchmark ERROR] Job {job_id} failed: {err_msg}")
+        traceback.print_exc()
+        save_job(job_id, {"status": "error", "dataset": dataset_name, "error": err_msg})
+
 
