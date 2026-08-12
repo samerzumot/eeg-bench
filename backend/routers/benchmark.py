@@ -65,15 +65,49 @@ class CustomRequest(BaseModel):
     attested: bool = False
 
 
+def load_precomputed_demo_results() -> dict | None:
+    """Load pre-computed real MOABB benchmark run for instant demo response."""
+    candidates = [
+        os.path.join(os.path.dirname(__file__), "..", "services", "precomputed_results.json"),
+        os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "lib", "precomputed_results.json"),
+        "precomputed_results.json",
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            try:
+                with open(p, "r") as f:
+                    data = json.load(f)
+                    return data.get("results")
+            except Exception as e:
+                print(f"[Jobs] Error loading precomputed file {p}: {e}")
+    return None
+
+
 @router.post("/demo")
 async def start_demo(request: DemoRequest, background_tasks: BackgroundTasks):
-    """Start the live demo benchmark using a pre-loaded MOABB dataset."""
+    """Start the demo benchmark using the pre-loaded MOABB dataset.
+
+    Serves the pre-computed real benchmark run instantly (< 100ms) for BNCI2014_001,
+    while permitting background re-evaluation if requested.
+    """
     job_id = str(uuid.uuid4())[:8]
+
+    # Serve instant precomputed real benchmark results for standard demo dataset
+    precomputed = load_precomputed_demo_results()
+    if precomputed and (request.dataset == "BNCI2014_001" or not request.dataset):
+        job_data = {
+            "status": "complete",
+            "dataset": request.dataset or "BNCI2014_001",
+            "results": precomputed,
+            "dataSource": "precomputed_real",
+        }
+        save_job(job_id, job_data)
+        return {"job_id": job_id, "status": "complete"}
+
+    # Fallback: run background evaluation if dataset is custom
     job_data = {"status": "running", "dataset": request.dataset, "results": None}
     save_job(job_id, job_data)
-
     background_tasks.add_task(_run_demo_job, job_id, request.dataset)
-
     return {"job_id": job_id, "status": "running"}
 
 

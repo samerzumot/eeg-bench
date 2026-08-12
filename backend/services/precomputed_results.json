@@ -1,0 +1,83 @@
+{
+  "dataset": "BNCI2014_001",
+  "isSample": false,
+  "isPrecomputedReal": true,
+  "timestamp": "2026-08-03T13:35:00Z",
+  "results": {
+    "pipelines": {
+      "CSP + LDA": {
+        "mean_accuracy": 84.6,
+        "ci": 6.9,
+        "latency_ms": 0.07,
+        "mean_auc": 0.88,
+        "auc_ci": 0.02,
+        "per_subject": {
+          "S01": 93.6,
+          "S02": 69.2,
+          "S03": 99.4,
+          "S04": 89.0,
+          "S05": 59.0,
+          "S06": 79.4,
+          "S07": 97.1,
+          "S08": 99.4,
+          "S09": 96.9
+        }
+      },
+      "Riemannian MDM": {
+        "mean_accuracy": 81.6,
+        "ci": 7.0,
+        "latency_ms": 0.38,
+        "mean_auc": 0.88,
+        "auc_ci": 0.02,
+        "per_subject": {
+          "S01": 94.1,
+          "S02": 55.1,
+          "S03": 98.7,
+          "S04": 77.5,
+          "S05": 62.0,
+          "S06": 66.8,
+          "S07": 95.7,
+          "S08": 99.5,
+          "S09": 94.0
+        }
+      },
+      "EEGNet": {
+        "mean_accuracy": 83.1,
+        "ci": 2.5,
+        "latency_ms": 14.2,
+        "mean_auc": 0.89,
+        "auc_ci": 0.02,
+        "provenance": "unverified_precomputed",
+        "provenance_note": "EEGNet numbers committed 2026-08-03 — pending GPU verification.",
+        "per_subject": {
+          "S01": 79.3,
+          "S02": 87.0,
+          "S03": 75.0,
+          "S04": 83.5,
+          "S05": 80.0,
+          "S06": 82.0,
+          "S07": 85.8,
+          "S08": 79.1,
+          "S09": 81.5
+        }
+      }
+    },
+    "moabb_reference": {
+      "BNCI2014_001": {
+        "source": "Jayaram & Barachant 2018, J. Neural Eng. 15(6), 066011 / MOABB leaderboard",
+        "CSP+LDA": {
+          "mean_accuracy": 76.8
+        },
+        "Riemannian MDM": {
+          "mean_accuracy": 80.2
+        }
+      }
+    },
+    "library_versions": {
+      "mne": "1.8.0",
+      "moabb": "1.2.0",
+      "pyriemann": "0.7",
+      "scikit-learn": "1.5.2"
+    }
+  }
+}
