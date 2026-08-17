@@ -1,11 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 export function Navbar() {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [isEvolve, setIsEvolve] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (window.location.hostname.includes("evolve") || pathname?.startsWith("/evolve")) {
+        setIsEvolve(true);
+      }
+    }
+  }, [pathname]);
+
+  // If on evolve portal, don't render academic navbar (Evolve renders its own EvolveNavbar)
+  if (isEvolve || pathname?.startsWith("/evolve")) {
+    return null;
+  }
 
   return (
     <>
@@ -72,13 +88,6 @@ export function Navbar() {
         {/* Mobile menu */}
         {mobileOpen && (
           <div className="md:hidden border-t px-6 py-4 flex flex-col gap-3 border-border bg-white">
-            <Link
-              href="/"
-              className="text-sm font-medium text-accent"
-              onClick={() => setMobileOpen(false)}
-            >
-              bniAdam AI Research Lab
-            </Link>
             <Link
               href="/benchmark"
               className="text-sm font-medium text-text-secondary"

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { BenchmarkBars, type PipelineResult } from "@/components/BenchmarkBars";
 import { EegTrace } from "@/components/EegTrace";
 import { PipelineTooltip } from "@/components/PipelineTooltip";
@@ -104,6 +106,9 @@ export default function BenchmarkPage() {
           </div>
         </div>
       )}
+
+      {/* Navigation */}
+      <Navbar />
 
       {/* Top Banner */}
       <div className="border-b border-border bg-surface/60 py-2 px-6">
@@ -467,6 +472,7 @@ export default function BenchmarkPage() {
           <p><strong>Export:</strong> 1-click Python reproduction script generation</p>
         </div>
       </SampleDetailModal>
+      <Footer />
     </>
   );
 }

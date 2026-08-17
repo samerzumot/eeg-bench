@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -17,9 +15,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EEG-Bench — Motor Imagery & Clinical EEG Benchmark",
-  description:
-    "Benchmark 2-class motor-imagery and clinical EEG classification with CSP+LDA, Riemannian MDM, and EEGNet. Built on MOABB, MNE-Python, and Braindecode.",
+  title: "Neurofeedback & Neural Signal Engineering",
+  description: "Advanced medical electrophysiology and at-home neurofeedback therapy platform.",
 };
 
 export default function RootLayout({
@@ -33,9 +30,7 @@ export default function RootLayout({
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-white text-text-primary">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <main className="flex-1 flex flex-col">{children}</main>
       </body>
     </html>
   );

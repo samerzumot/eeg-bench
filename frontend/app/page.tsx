@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { InteractiveTelemetry } from "@/components/InteractiveTelemetry";
 import { TopoMap } from "@/components/TopoMap";
 import { SampleDetailModal } from "@/components/SampleDetailModal";
@@ -74,7 +76,8 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-[#FAFBFD] text-text-primary selection:bg-accent/10 font-sans min-h-screen relative overflow-hidden">
+    <div className="bg-[#FAFBFD] text-text-primary selection:bg-accent/10 font-sans min-h-screen relative overflow-hidden flex flex-col">
+      <Navbar />
       {/* Background soft glowing gradients */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-accent/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-emerald-500/5 blur-[150px] pointer-events-none" />
@@ -573,6 +576,7 @@ export default function Home() {
           </form>
         )}
       </SampleDetailModal>
+      <Footer />
     </div>
   );
 }
