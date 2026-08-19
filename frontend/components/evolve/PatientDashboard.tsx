@@ -56,24 +56,6 @@ export function PatientDashboard({
         </div>
 
         <div className="flex items-center gap-2">
-          {onOpenMuseModal && (
-            <button
-              onClick={onOpenMuseModal}
-              className={`btn text-xs py-1 px-3 rounded-lg border flex items-center gap-1.5 transition-all ${
-                isMuseConnected
-                  ? "bg-teal-50 border-teal-300 text-teal-800 font-semibold"
-                  : "bg-white border-border text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isMuseConnected ? "bg-teal-500 animate-pulse" : "bg-slate-400"
-                }`}
-              />
-              <span>{isMuseConnected ? "Muse Headset: Connected" : "Connect Muse Headset"}</span>
-            </button>
-          )}
-
           <button
             onClick={handleCopyShareLink}
             className="btn btn-outline text-xs py-1 px-3 flex items-center gap-1.5"
