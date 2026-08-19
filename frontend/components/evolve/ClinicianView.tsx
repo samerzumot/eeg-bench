@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
 import { jsPDF } from "jspdf";
 import { 
   FileText, Check, Download, 
@@ -144,7 +143,7 @@ export function ClinicianView({
 
     ctx.clearRect(0, 0, rect.width, rect.height);
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.06)";
     ctx.lineWidth = 1;
     for (let x = 0; x < rect.width; x += 24) {
       ctx.beginPath();
@@ -155,11 +154,11 @@ export function ClinicianView({
 
     const raw = eegState?.rawSamples || { tp9: [], af7: [], af8: [], tp10: [], ilfSlowWave: [] };
     const channels = [
-      { name: `ILF (${orfHz}Hz)`, data: raw.ilfSlowWave || [], color: "#F59E0B", isIlf: true },
-      { name: "AF7 (L-Frontal)", data: raw.af7 || [], color: "#3B9B8F" },
-      { name: "AF8 (R-Frontal)", data: raw.af8 || [], color: "#2DD4BF" },
-      { name: "TP9 (L-Temporal)", data: raw.tp9 || [], color: "#38BDF8" },
-      { name: "TP10 (R-Temporal)", data: raw.tp10 || [], color: "#818CF8" },
+      { name: `ILF (${orfHz}Hz)`, data: raw.ilfSlowWave || [], color: "#D97706", isIlf: true },
+      { name: "AF7 (L-Frontal)", data: raw.af7 || [], color: "#0D9488" },
+      { name: "AF8 (R-Frontal)", data: raw.af8 || [], color: "#059669" },
+      { name: "TP9 (L-Temporal)", data: raw.tp9 || [], color: "#0284C7" },
+      { name: "TP10 (R-Temporal)", data: raw.tp10 || [], color: "#4F46E5" },
     ];
 
     const chHeight = rect.height / channels.length;
@@ -168,13 +167,13 @@ export function ClinicianView({
       const centerY = idx * chHeight + chHeight / 2;
 
       ctx.fillStyle = ch.color;
-      ctx.font = "600 9px monospace";
+      ctx.font = "600 10px monospace";
       ctx.fillText(ch.name, 10, centerY - 2);
 
       const data = ch.data;
       if (data && data.length > 1) {
         ctx.strokeStyle = ch.color;
-        ctx.lineWidth = ch.isIlf ? 1.75 : 1.1;
+        ctx.lineWidth = ch.isIlf ? 1.75 : 1.2;
         ctx.beginPath();
         const startX = 110;
         const availableW = rect.width - startX - 10;
@@ -248,7 +247,7 @@ export function ClinicianView({
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
-  // Clinical PDF Report Generator (NO CPT BILLING CODES)
+  // Clinical PDF Report Generator (NO CPT CODES)
   const handleExportPdf = () => {
     setIsGeneratingPdf(true);
     try {
@@ -405,35 +404,37 @@ export function ClinicianView({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-slate-900 font-sans">
       {/* Clinician Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-xl bg-card border border-border shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="relative w-14 h-14 rounded-full overflow-hidden border border-emerald-500/40 shrink-0">
-            <Image
-              src="/dr-upasana-gala.png"
+          <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-teal-600 shadow-sm shrink-0 bg-slate-100">
+            <img
+              src="/evolve/dr-upasana-gala.png"
               alt="Dr. Upasana Gala"
-              fill
-              className="object-cover"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = "/dr-upasana-gala.png";
+              }}
             />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-base font-semibold text-text-primary">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-base font-bold text-slate-900">
                 Dr. Upasana Gala (PhD, BCN, QEEG-D)
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-600/80 text-emerald-400 font-semibold">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-50 border border-teal-300 text-teal-800 font-bold">
                 Clinician Portal
               </span>
             </div>
-            <p className="text-xs text-text-secondary">
+            <p className="text-xs text-slate-500 mt-0.5">
               Founder, Evolve Brain Training · Dubai Healthcare City & Abu Dhabi
             </p>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleExportPdf}
             disabled={isGeneratingPdf}
@@ -447,7 +448,7 @@ export function ClinicianView({
           {onOpenDemo && (
             <button
               onClick={onOpenDemo}
-              className="btn btn-outline text-xs py-2 px-3 border-teal-800/80 text-teal-300 bg-teal-950/40 hover:bg-teal-950/80"
+              className="btn btn-outline text-xs py-2 px-3 border-teal-300 text-teal-800 bg-teal-50 hover:bg-teal-100 font-medium"
             >
               Doctor Tour
             </button>
@@ -455,9 +456,9 @@ export function ClinicianView({
 
           <button
             onClick={handleCopyLink}
-            className="btn btn-outline text-xs py-2 px-3 flex items-center gap-1.5"
+            className="btn btn-outline text-xs py-2 px-3 flex items-center gap-1.5 text-slate-700"
           >
-            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5 text-text-secondary" />}
+            {copiedLink ? <Check className="w-3.5 h-3.5 text-teal-600" /> : <Share2 className="w-3.5 h-3.5 text-slate-500" />}
             <span>{copiedLink ? "Link Copied" : "Share Patient Link"}</span>
           </button>
         </div>
@@ -465,18 +466,19 @@ export function ClinicianView({
 
       {/* Success Notification */}
       {toastMsg && (
-        <div className="p-3 rounded-xl bg-emerald-950/70 border border-emerald-600/80 text-emerald-300 text-xs flex items-center gap-2 animate-fade-in shadow-xs">
-          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>{toastMsg}</span>
+        <div className="p-3 rounded-xl bg-teal-50 border border-teal-300 text-teal-900 text-xs flex items-center gap-2 animate-fade-in shadow-xs">
+          <Check className="w-4 h-4 text-teal-600 shrink-0" />
+          <span className="font-medium">{toastMsg}</span>
         </div>
       )}
 
-      {/* Main Layout Grid */}
+      {/* Main Layout Grid: Responsive on mobile/desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+        
         {/* Patient Roster Left */}
-        <div className="p-4 rounded-xl bg-card border border-border space-y-3">
-          <div className="flex items-center justify-between border-b border-border pb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary font-mono">
+        <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
               Patient Roster ({patients.length})
             </span>
           </div>
@@ -490,18 +492,18 @@ export function ClinicianView({
                   onClick={() => onSelectPatient(p.id)}
                   className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
                     isSelected
-                      ? "bg-emerald-950/60 border-emerald-500 shadow-xs"
-                      : "bg-surface border-border hover:bg-surface-hover text-text-primary"
+                      ? "bg-teal-50/90 border-teal-500 text-slate-900 shadow-xs ring-1 ring-teal-400"
+                      : "bg-slate-50/70 border-slate-200 hover:bg-slate-100 text-slate-800"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-text-primary">{p.name}</span>
-                    <span className="text-[10px] font-mono font-bold text-emerald-400">{p.id}</span>
+                    <span className="text-xs font-bold text-slate-900">{p.name}</span>
+                    <span className="text-[10px] font-mono font-bold text-teal-700">{p.id}</span>
                   </div>
-                  <p className="text-[11px] text-text-secondary mt-0.5 truncate">{p.indication}</p>
-                  <div className="mt-1.5 flex items-center justify-between text-[10px] text-text-secondary font-mono border-t border-border pt-1">
+                  <p className="text-[11px] text-slate-600 mt-0.5 truncate">{p.indication}</p>
+                  <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-500 font-mono border-t border-slate-200/60 pt-1">
                     <span>{p.completedSessions}/{p.totalPrescribed} Sessions</span>
-                    <span className="text-emerald-400">+{p.coherenceImprovementPercent}% Gain</span>
+                    <span className="text-teal-700 font-bold">+{p.coherenceImprovementPercent}% Gain</span>
                   </div>
                 </div>
               );
@@ -511,53 +513,55 @@ export function ClinicianView({
 
         {/* Sub-Tabs Right */}
         <div className="space-y-6">
-          <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3 font-mono text-xs">
+          
+          {/* Horizontally scrollable sub-tabs for mobile screens */}
+          <div className="flex items-center gap-2 border-b border-slate-200 pb-3 font-mono text-xs overflow-x-auto whitespace-nowrap scrollbar-none">
             <button
               onClick={() => setActiveTab("programs")}
-              className={`px-3.5 py-1.5 rounded-lg transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg transition-all shrink-0 ${
                 activeTab === "programs"
-                  ? "bg-emerald-950 border border-emerald-600 text-emerald-300 font-semibold shadow-xs"
-                  : "bg-surface border border-border text-text-secondary hover:text-text-primary"
+                  ? "bg-teal-700 text-white font-semibold shadow-xs"
+                  : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900"
               }`}
             >
               Pre-Populated Programs
             </button>
             <button
               onClick={() => setActiveTab("protocol")}
-              className={`px-3.5 py-1.5 rounded-lg transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg transition-all shrink-0 ${
                 activeTab === "protocol"
-                  ? "bg-emerald-950 border border-emerald-600 text-emerald-300 font-semibold shadow-xs"
-                  : "bg-surface border border-border text-text-secondary hover:text-text-primary"
+                  ? "bg-teal-700 text-white font-semibold shadow-xs"
+                  : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900"
               }`}
             >
               Custom ORF Calibration
             </button>
             <button
               onClick={() => setActiveTab("brainmap")}
-              className={`px-3.5 py-1.5 rounded-lg transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg transition-all shrink-0 ${
                 activeTab === "brainmap"
-                  ? "bg-emerald-950 border border-emerald-600 text-emerald-300 font-semibold shadow-xs"
-                  : "bg-surface border border-border text-text-secondary hover:text-text-primary"
+                  ? "bg-teal-700 text-white font-semibold shadow-xs"
+                  : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900"
               }`}
             >
               QEEG Brain Topography
             </button>
             <button
               onClick={() => setActiveTab("assessments")}
-              className={`px-3.5 py-1.5 rounded-lg transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg transition-all shrink-0 ${
                 activeTab === "assessments"
-                  ? "bg-emerald-950 border border-emerald-600 text-emerald-300 font-semibold shadow-xs"
-                  : "bg-surface border border-border text-text-secondary hover:text-text-primary"
+                  ? "bg-teal-700 text-white font-semibold shadow-xs"
+                  : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900"
               }`}
             >
               Psychometric Scales (GAD/ASRS)
             </button>
             <button
               onClick={() => setActiveTab("telesupervision")}
-              className={`px-3.5 py-1.5 rounded-lg transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg transition-all shrink-0 ${
                 activeTab === "telesupervision"
-                  ? "bg-emerald-950 border border-emerald-600 text-emerald-300 font-semibold shadow-xs"
-                  : "bg-surface border border-border text-text-secondary hover:text-text-primary"
+                  ? "bg-teal-700 text-white font-semibold shadow-xs"
+                  : "bg-white border border-slate-200 text-slate-600 hover:text-slate-900"
               }`}
             >
               Live Tele-Supervision
@@ -568,50 +572,50 @@ export function ClinicianView({
           {activeTab === "programs" && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-semibold text-text-primary">
+                <h3 className="text-sm font-bold text-slate-900">
                   Pre-Populated Clinical Programs for {selectedPatient.name}
                 </h3>
-                <p className="text-xs text-text-secondary">
+                <p className="text-xs text-slate-500">
                   Click any program below to instantly configure this patient&apos;s therapy protocol, video modulation, and guidance note.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {PREPOPULATED_PROGRAMS.map((prog) => (
                   <div
                     key={prog.id}
-                    className="p-5 rounded-xl bg-card border border-border hover:border-emerald-500/60 transition-all flex flex-col justify-between space-y-3"
+                    className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-teal-500 shadow-sm transition-all flex flex-col justify-between space-y-3"
                   >
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-text-primary">{prog.title}</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/60 text-emerald-400 font-semibold">
+                        <span className="text-xs font-bold text-slate-900">{prog.title}</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 font-bold">
                           {prog.condition}
                         </span>
                       </div>
-                      <p className="text-[11px] text-text-secondary leading-relaxed">
+                      <p className="text-[11px] text-slate-600 leading-relaxed italic">
                         &ldquo;{prog.guidanceNote}&rdquo;
                       </p>
                     </div>
 
-                    <div className="pt-2 border-t border-border grid grid-cols-3 gap-2 text-[10px] font-mono">
-                      <div className="p-1.5 rounded bg-surface border border-border">
-                        <span className="text-text-secondary block">Target ORF</span>
-                        <span className="font-bold text-text-primary">{prog.orfHz} Hz</span>
+                    <div className="pt-2 border-t border-slate-100 grid grid-cols-3 gap-2 text-[10px] font-mono">
+                      <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200 text-center">
+                        <span className="text-slate-500 block text-[9px]">Target ORF</span>
+                        <span className="font-bold text-slate-900">{prog.orfHz} Hz</span>
                       </div>
-                      <div className="p-1.5 rounded bg-surface border border-border">
-                        <span className="text-text-secondary block">Sensitivity</span>
-                        <span className="font-bold text-text-primary">{prog.threshold}%</span>
+                      <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200 text-center">
+                        <span className="text-slate-500 block text-[9px]">Sensitivity</span>
+                        <span className="font-bold text-slate-900">{prog.threshold}%</span>
                       </div>
-                      <div className="p-1.5 rounded bg-surface border border-border">
-                        <span className="text-text-secondary block">Duration</span>
-                        <span className="font-bold text-text-primary">{prog.duration} min</span>
+                      <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200 text-center">
+                        <span className="text-slate-500 block text-[9px]">Duration</span>
+                        <span className="font-bold text-slate-900">{prog.duration} min</span>
                       </div>
                     </div>
 
                     <button
                       onClick={() => handleApplyProgram(prog)}
-                      className="btn btn-primary w-full py-2 text-xs font-semibold mt-1"
+                      className="btn btn-primary w-full py-2 text-xs font-semibold mt-1 shadow-xs"
                     >
                       Apply & Push Protocol to Patient →
                     </button>
@@ -623,12 +627,12 @@ export function ClinicianView({
 
           {/* TAB 2: Custom Protocol Calibration */}
           {activeTab === "protocol" && (
-            <div className="p-6 rounded-xl bg-card border border-border space-y-5">
+            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-5">
               <div>
-                <h3 className="text-sm font-semibold text-text-primary">
+                <h3 className="text-sm font-bold text-slate-900">
                   Custom Protocol Calibration: {selectedPatient.name} ({selectedPatient.id})
                 </h3>
-                <p className="text-xs text-text-secondary">
+                <p className="text-xs text-slate-500">
                   Fine-tune individual Optimal Response Frequency (ORF), sensitivity, and duration.
                 </p>
               </div>
@@ -636,8 +640,8 @@ export function ClinicianView({
               {/* ORF Selector */}
               <div>
                 <div className="flex items-center justify-between mb-2 text-xs">
-                  <span className="font-medium text-text-primary">Optimal Response Frequency (ORF) Fine-Tuning:</span>
-                  <span className="font-mono font-bold text-emerald-400">{orfHz} Hz Slow Wave</span>
+                  <span className="font-semibold text-slate-800">Optimal Response Frequency (ORF) Fine-Tuning:</span>
+                  <span className="font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">{orfHz} Hz Slow Wave</span>
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 font-mono text-xs">
                   {[0.001, 0.002, 0.005, 0.010, 0.015, 0.025].map((hz) => (
@@ -646,8 +650,8 @@ export function ClinicianView({
                       onClick={() => setOrfHz(hz)}
                       className={`p-2.5 rounded-lg border text-center transition-all ${
                         orfHz === hz
-                          ? "bg-emerald-950 border-emerald-500 text-emerald-300 font-bold shadow-xs"
-                          : "bg-surface border-border text-text-secondary hover:text-text-primary"
+                          ? "bg-teal-700 text-white font-bold shadow-xs border-teal-700"
+                          : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                       }`}
                     >
                       {hz} Hz
@@ -657,10 +661,10 @@ export function ClinicianView({
               </div>
 
               {/* Threshold Slider */}
-              <div className="p-3.5 rounded-xl bg-surface border border-border">
-                <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="font-medium text-text-primary">Target Coherence Sensitivity Threshold:</span>
-                  <span className="font-mono font-semibold text-emerald-400">{threshold}%</span>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-800">Target Coherence Sensitivity Threshold:</span>
+                  <span className="font-mono font-bold text-teal-700">{threshold}%</span>
                 </div>
                 <input
                   type="range"
@@ -668,27 +672,27 @@ export function ClinicianView({
                   max="90"
                   value={threshold}
                   onChange={(e) => setThreshold(Number(e.target.value))}
-                  className="w-full accent-emerald-500 cursor-pointer"
+                  className="w-full accent-teal-600 cursor-pointer"
                 />
               </div>
 
               {/* Guidance Note */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-text-primary block">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-900 block">
                   Personalized Clinical Guidance Note:
                 </label>
                 <textarea
                   rows={3}
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
-                  className="w-full p-3 text-xs rounded-xl border border-border bg-surface text-text-primary focus:outline-none focus:border-emerald-500 leading-relaxed"
+                  className="w-full p-3 text-xs rounded-xl border border-slate-300 bg-white text-slate-900 focus:outline-none focus:border-teal-600 leading-relaxed shadow-2xs"
                   placeholder="Enter clinical advice for patient..."
                 />
               </div>
 
               <button
                 onClick={handleSaveCustomProtocol}
-                className="btn btn-primary text-xs py-2.5 px-6 font-semibold"
+                className="btn btn-primary text-xs py-2.5 px-6 font-semibold shadow-sm"
               >
                 Save & Sync Custom Protocol to Patient →
               </button>
@@ -705,22 +709,22 @@ export function ClinicianView({
 
           {/* TAB 4: Standardized Psychometrics */}
           {activeTab === "assessments" && (
-            <div className="p-6 rounded-xl bg-card border border-border space-y-6">
-              <div className="flex items-center justify-between border-b border-border pb-3">
+            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <ClipboardList className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-sm font-semibold text-text-primary">
+                    <ClipboardList className="w-4 h-4 text-teal-700" />
+                    <h3 className="text-sm font-bold text-slate-900">
                       Standardized Clinical Psychometrics & Intake Tracking
                     </h3>
                   </div>
-                  <p className="text-xs text-text-secondary mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     Objective EEG biomarkers correlated with validated psychometric symptom scales.
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   {
                     name: "GAD-7 (Generalized Anxiety)",
@@ -755,27 +759,27 @@ export function ClinicianView({
                     gain: "-71.4%",
                   },
                 ].map((test) => (
-                  <div key={test.name} className="p-4 rounded-xl bg-surface border border-border space-y-2">
+                  <div key={test.name} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-text-primary">{test.name}</span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">{test.gain}</span>
+                      <span className="text-xs font-bold text-slate-900">{test.name}</span>
+                      <span className="text-xs font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">{test.gain}</span>
                     </div>
                     <div className="flex items-center gap-4 text-xs font-mono">
                       <div>
-                        <span className="text-[10px] text-text-secondary block">Intake Score</span>
-                        <span className="text-rose-400 font-bold">{test.intake} pts</span>
+                        <span className="text-[10px] text-slate-500 block">Intake Score</span>
+                        <span className="text-rose-600 font-bold">{test.intake} pts</span>
                       </div>
-                      <span className="text-text-secondary">→</span>
+                      <span className="text-slate-400">→</span>
                       <div>
-                        <span className="text-[10px] text-text-secondary block">Current Score</span>
-                        <span className="text-emerald-400 font-bold">{test.current} pts</span>
+                        <span className="text-[10px] text-slate-500 block">Current Score</span>
+                        <span className="text-teal-700 font-bold">{test.current} pts</span>
                       </div>
                       <div className="ml-auto text-right">
-                        <span className="text-[10px] text-text-secondary block">Clinical Shift</span>
-                        <span className="text-text-primary text-[11px] font-sans">{test.status}</span>
+                        <span className="text-[10px] text-slate-500 block">Clinical Shift</span>
+                        <span className="text-slate-800 text-[11px] font-sans font-medium">{test.status}</span>
                       </div>
                     </div>
-                    <p className="text-[11px] text-text-secondary pt-1 border-t border-border">
+                    <p className="text-[11px] text-slate-600 pt-1 border-t border-slate-200">
                       {test.desc}
                     </p>
                   </div>
@@ -786,41 +790,41 @@ export function ClinicianView({
 
           {/* TAB 5: Live Clinician Tele-Supervision */}
           {activeTab === "telesupervision" && (
-            <div className="p-6 rounded-xl bg-card border border-border space-y-5">
-              <div className="flex items-center justify-between border-b border-border pb-3">
+            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
-                    <h3 className="text-sm font-semibold text-text-primary">
+                    <Radio className="w-4 h-4 text-teal-700 animate-pulse" />
+                    <h3 className="text-sm font-bold text-slate-900">
                       Live Tele-Supervision & Remote Bio-Observation Stream
                     </h3>
                   </div>
-                  <p className="text-xs text-text-secondary mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     Live raw EEG waveforms, impedance, and remote threshold calibration during telehealth coaching.
                   </p>
                 </div>
-                <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-950 border border-emerald-600 text-emerald-300 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-teal-50 border border-teal-300 text-teal-900 font-bold flex items-center gap-1.5 shrink-0 self-start sm:self-auto">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-600 animate-ping" />
                   Live 256Hz WebStream
                 </span>
               </div>
 
               {/* Live Oscilloscope */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-mono text-text-secondary">
-                  <span>Raw Electrode Potentials (AF7, AF8, TP9, TP10, ILF Slow Potential)</span>
-                  <span className="text-emerald-400 font-bold">Impedance: Optimal &lt; 5kΩ</span>
+                <div className="flex flex-wrap items-center justify-between text-xs font-mono text-slate-500 gap-2">
+                  <span>Raw Electrodes (AF7, AF8, TP9, TP10, ILF Slow Potential)</span>
+                  <span className="text-teal-700 font-bold">Impedance: Optimal &lt; 5kΩ</span>
                 </div>
-                <div className="h-52 w-full rounded-xl bg-slate-950 border border-slate-800 overflow-hidden">
+                <div className="h-52 w-full rounded-xl bg-slate-50 border border-slate-200 overflow-hidden shadow-inner">
                   <canvas ref={liveCanvasRef} className="w-full h-full block" />
                 </div>
               </div>
 
               {/* Mid-Session Remote Protocol Tweak */}
-              <div className="p-4 rounded-xl bg-surface border border-border space-y-3">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-text-primary">Live Remote Threshold Adjustment:</span>
-                  <span className="font-mono text-emerald-400 font-bold">{threshold}% Sensitivity</span>
+                  <span className="font-bold text-slate-900">Live Remote Threshold Adjustment:</span>
+                  <span className="font-mono text-teal-700 font-bold">{threshold}% Sensitivity</span>
                 </div>
                 <input
                   type="range"
@@ -831,9 +835,9 @@ export function ClinicianView({
                     setThreshold(Number(e.target.value));
                     onUpdateProtocol(selectedPatient.id, { thresholdScore: Number(e.target.value) });
                   }}
-                  className="w-full accent-emerald-500 cursor-pointer"
+                  className="w-full accent-teal-600 cursor-pointer"
                 />
-                <p className="text-[11px] text-text-secondary">
+                <p className="text-[11px] text-slate-500">
                   Adjusting this slider pushes instantaneous threshold changes to the patient&apos;s active session screen in real time.
                 </p>
               </div>

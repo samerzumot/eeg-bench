@@ -78,16 +78,16 @@ export function TopoBrainMap({ baselineScore = 58, currentScore = 86 }: TopoBrai
 
   const renderScalpMap = (isCurrent: boolean, label: string) => {
     return (
-      <div className="flex flex-col items-center space-y-2">
-        <div className="flex items-center justify-between w-full px-2 text-xs font-mono">
-          <span className="font-semibold text-text-primary dark:text-[#EDEDED]">{label}</span>
-          <span className={isCurrent ? "text-emerald-500 font-bold" : "text-text-secondary"}>
+      <div className="flex flex-col items-center space-y-2 w-full max-w-[280px]">
+        <div className="flex items-center justify-between w-full px-1 text-xs font-mono">
+          <span className="font-bold text-slate-800">{label}</span>
+          <span className={isCurrent ? "text-teal-700 font-bold" : "text-slate-500"}>
             {isCurrent ? `Score: ${currentScore}/100` : `Baseline: ${baselineScore}/100`}
           </span>
         </div>
 
         {/* Scalp Circular Container */}
-        <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full bg-slate-900 border-2 border-slate-700 shadow-inner flex items-center justify-center p-3">
+        <div className="relative w-64 h-64 rounded-full bg-slate-900 border-2 border-slate-700 shadow-inner flex items-center justify-center p-3">
           
           {/* Nose Indicator */}
           <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[12px] border-b-slate-600" />
@@ -98,18 +98,18 @@ export function TopoBrainMap({ baselineScore = 58, currentScore = 86 }: TopoBrai
 
           {/* Interpolated Topo Power Gradient Mesh */}
           <div 
-            className="absolute inset-4 rounded-full opacity-60 pointer-events-none transition-all duration-700"
+            className="absolute inset-4 rounded-full opacity-65 pointer-events-none transition-all duration-700"
             style={{
               background: isCurrent
                 ? selectedBand === "theta_beta" || selectedBand === "beta"
-                  ? "radial-gradient(circle at 50% 30%, rgba(16,185,129,0.5) 0%, rgba(13,148,136,0.3) 50%, rgba(10,10,10,0.8) 100%)"
-                  : "radial-gradient(circle at 50% 50%, rgba(16,185,129,0.55) 0%, rgba(6,95,70,0.3) 60%, rgba(10,10,10,0.8) 100%)"
-                : "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.55) 0%, rgba(245,158,11,0.35) 50%, rgba(10,10,10,0.8) 100%)"
+                  ? "radial-gradient(circle at 50% 30%, rgba(16,185,129,0.6) 0%, rgba(13,148,136,0.35) 50%, rgba(15,23,42,0.85) 100%)"
+                  : "radial-gradient(circle at 50% 50%, rgba(16,185,129,0.65) 0%, rgba(6,95,70,0.35) 60%, rgba(15,23,42,0.85) 100%)"
+                : "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.65) 0%, rgba(245,158,11,0.4) 50%, rgba(15,23,42,0.85) 100%)"
             }}
           />
 
           {/* Scalp Coordinate Grid Crosshairs */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none stroke-slate-800" strokeWidth="1">
+          <svg className="absolute inset-0 w-full h-full pointer-events-none stroke-slate-700/60" strokeWidth="1">
             <line x1="50%" y1="6%" x2="50%" y2="94%" />
             <line x1="6%" y1="50%" x2="94%" y2="50%" />
             <circle cx="50%" cy="50%" r="35%" fill="none" />
@@ -132,7 +132,7 @@ export function TopoBrainMap({ baselineScore = 58, currentScore = 86 }: TopoBrai
                 <div 
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-mono font-bold transition-transform ${
                     isSelected ? "ring-2 ring-white scale-125 z-20 shadow-md" : "hover:scale-115"
-                  } ${el.active ? "border border-emerald-400/70" : "border border-slate-600"}`}
+                  } ${el.active ? "border border-emerald-400/80" : "border border-slate-600"}`}
                   style={{
                     backgroundColor: color,
                     color: "#000000"
@@ -146,7 +146,7 @@ export function TopoBrainMap({ baselineScore = 58, currentScore = 86 }: TopoBrai
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-text-secondary">
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-500">
           <span>Low</span>
           <div className="h-1.5 w-24 rounded-full bg-gradient-to-r from-blue-600 via-teal-500 to-emerald-400" />
           <span>Optimal</span>
@@ -156,33 +156,33 @@ export function TopoBrainMap({ baselineScore = 58, currentScore = 86 }: TopoBrai
   };
 
   return (
-    <div className="p-6 rounded-xl bg-card border border-border space-y-6 text-text-primary font-sans">
+    <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-6 text-slate-900 font-sans">
       
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-emerald-500" />
-            <h3 className="text-sm font-semibold text-text-primary">
+            <Brain className="w-5 h-5 text-teal-700" />
+            <h3 className="text-sm font-bold text-slate-900">
               Quantitative EEG (QEEG) Cortical Topography
             </h3>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/60 text-emerald-300">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 font-bold">
               Verified QEEG-D Map
             </span>
           </div>
-          <p className="text-xs text-text-secondary mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Scalp-wide spatial distribution of spectral power across 10-20 montages vs. Dr. Upasana Gala&apos;s normative reference.
           </p>
         </div>
 
         {/* View Mode Toggle */}
-        <div className="flex items-center p-1 bg-surface rounded-lg border border-border text-xs font-mono shrink-0">
+        <div className="flex items-center p-1 bg-slate-50 rounded-lg border border-slate-200 text-xs font-mono shrink-0 self-start sm:self-auto">
           <button
             onClick={() => setViewMode("comparison")}
             className={`px-3 py-1 rounded transition-all ${
               viewMode === "comparison"
-                ? "bg-emerald-950 border border-emerald-600 text-emerald-300 font-semibold shadow-xs"
-                : "text-text-secondary hover:text-text-primary"
+                ? "bg-teal-700 text-white font-semibold shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Baseline vs. Current
@@ -191,8 +191,8 @@ export function TopoBrainMap({ baselineScore = 58, currentScore = 86 }: TopoBrai
             onClick={() => setViewMode("current")}
             className={`px-3 py-1 rounded transition-all ${
               viewMode === "current"
-                ? "bg-emerald-950 border border-emerald-600 text-emerald-300 font-semibold shadow-xs"
-                : "text-text-secondary hover:text-text-primary"
+                ? "bg-teal-700 text-white font-semibold shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Current Only
@@ -208,28 +208,28 @@ export function TopoBrainMap({ baselineScore = 58, currentScore = 86 }: TopoBrai
             onClick={() => setSelectedBand(b.id)}
             className={`p-2.5 rounded-lg border text-left transition-all ${
               selectedBand === b.id
-                ? "bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-xs"
-                : "bg-surface border-border text-text-secondary hover:text-text-primary"
+                ? "bg-teal-50 border-teal-500 text-teal-900 shadow-xs font-bold ring-1 ring-teal-400"
+                : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             }`}
           >
-            <span className="font-semibold block truncate">{b.name}</span>
-            <span className="text-[10px] text-text-secondary block">{b.range}</span>
+            <span className="font-bold block truncate">{b.name}</span>
+            <span className="text-[10px] text-slate-500 block">{b.range}</span>
           </button>
         ))}
       </div>
 
       {/* Scalp Maps Container */}
-      <div className="p-4 rounded-xl bg-surface border border-border">
-        <div className="flex flex-wrap items-center justify-center gap-8 py-2">
+      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 py-2">
           {viewMode === "comparison" ? (
             <>
               {renderScalpMap(false, "Pre-Therapy Baseline (Session 1)")}
               <div className="hidden lg:flex flex-col items-center justify-center text-center space-y-1">
-                <div className="w-8 h-8 rounded-full bg-emerald-950/80 border border-emerald-700/60 flex items-center justify-center text-emerald-400 font-mono font-bold text-xs">
+                <div className="w-8 h-8 rounded-full bg-teal-50 border border-teal-300 flex items-center justify-center text-teal-800 font-mono font-bold text-xs">
                   →
                 </div>
-                <span className="text-[10px] font-mono text-emerald-400 font-semibold">+28% Gain</span>
-                <span className="text-[9px] text-text-secondary">14 Sessions</span>
+                <span className="text-[10px] font-mono text-teal-700 font-bold">+28% Gain</span>
+                <span className="text-[9px] text-slate-500">14 Sessions</span>
               </div>
               {renderScalpMap(true, "Latest Post-Training Topography")}
             </>
@@ -243,51 +243,51 @@ export function TopoBrainMap({ baselineScore = 58, currentScore = 86 }: TopoBrai
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
         
         {/* Left: Lead Detail */}
-        <div className="p-4 rounded-xl bg-surface border border-border space-y-2">
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-text-secondary">Selected Lead:</span>
-            <span className="font-bold text-emerald-400 text-sm">
+            <span className="text-slate-500">Selected Lead:</span>
+            <span className="font-bold text-teal-800 text-sm">
               {selectedElectrode.label} — {selectedElectrode.region}
             </span>
           </div>
-          <div className="space-y-1 text-text-primary font-sans text-[11px]">
+          <div className="space-y-1 text-slate-700 font-sans text-[11px]">
             <p>
               {selectedElectrode.active 
                 ? "Primary Muse 2/S telemetry montage lead. Continuously captured at 256 Hz with active EOG/EMG artifact rejection."
                 : "Interpolated 10-20 montage channel based on full clinical 19-channel QEEG intake assessment."}
             </p>
           </div>
-          <div className="pt-2 border-t border-border grid grid-cols-2 gap-2 text-[11px]">
+          <div className="pt-2 border-t border-slate-200 grid grid-cols-2 gap-2 text-[11px]">
             <div>
-              <span className="text-text-secondary block text-[10px]">Pre-Treatment Z-Score:</span>
-              <span className="text-rose-400 font-bold">+2.4σ (Hyperarousal)</span>
+              <span className="text-slate-500 block text-[10px]">Pre-Treatment Z-Score:</span>
+              <span className="text-rose-600 font-bold">+2.4σ (Hyperarousal)</span>
             </div>
             <div>
-              <span className="text-text-secondary block text-[10px]">Current Normalized Z-Score:</span>
-              <span className="text-emerald-400 font-bold">+0.3σ (Normative Zone)</span>
+              <span className="text-slate-500 block text-[10px]">Current Normalized Z-Score:</span>
+              <span className="text-teal-700 font-bold">+0.3σ (Normative Zone)</span>
             </div>
           </div>
         </div>
 
         {/* Right: Key Objective Biomarkers */}
-        <div className="p-4 rounded-xl bg-surface border border-border space-y-2">
-          <span className="text-text-secondary block">Core Clinical Biomarker Gains:</span>
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+          <span className="text-slate-500 block font-semibold">Core Clinical Biomarker Gains:</span>
           <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div className="p-2 rounded bg-card border border-border">
-              <span className="text-text-secondary block text-[10px]">Theta/Beta Ratio (ADHD)</span>
-              <span className="font-bold text-emerald-400">1.82 (was 3.40)</span>
+            <div className="p-2 rounded bg-white border border-slate-200">
+              <span className="text-slate-500 block text-[10px]">Theta/Beta Ratio (ADHD)</span>
+              <span className="font-bold text-teal-700">1.82 (was 3.40)</span>
             </div>
-            <div className="p-2 rounded bg-card border border-border">
-              <span className="text-text-secondary block text-[10px]">Frontal Asymmetry (Mood)</span>
-              <span className="font-bold text-emerald-400">+0.18 (Left Dominant)</span>
+            <div className="p-2 rounded bg-white border border-slate-200">
+              <span className="text-slate-500 block text-[10px]">Frontal Asymmetry (Mood)</span>
+              <span className="font-bold text-teal-700">+0.18 (Left Dominant)</span>
             </div>
-            <div className="p-2 rounded bg-card border border-border">
-              <span className="text-text-secondary block text-[10px]">ILF Slow-Wave Stability</span>
-              <span className="font-bold text-emerald-400">92% In-Zone</span>
+            <div className="p-2 rounded bg-white border border-slate-200">
+              <span className="text-slate-500 block text-[10px]">ILF Slow-Wave Stability</span>
+              <span className="font-bold text-teal-700">92% In-Zone</span>
             </div>
-            <div className="p-2 rounded bg-card border border-border">
-              <span className="text-text-secondary block text-[10px]">Peak Alpha Frequency</span>
-              <span className="font-bold text-emerald-400">10.2 Hz (Optimal)</span>
+            <div className="p-2 rounded bg-white border border-slate-200">
+              <span className="text-slate-500 block text-[10px]">Peak Alpha Frequency</span>
+              <span className="font-bold text-teal-700">10.2 Hz (Optimal)</span>
             </div>
           </div>
         </div>
