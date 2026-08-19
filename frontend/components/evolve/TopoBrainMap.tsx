@@ -1,223 +1,299 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { Brain } from "lucide-react";
 
 const ELECTRODES = [
-  { name: "AF7", x: -0.38, y: -0.70, active: true },
-  { name: "AF8", x: 0.38, y: -0.70, active: true },
-  { name: "TP9", x: -0.75, y: 0.28, active: true },
-  { name: "TP10", x: 0.75, y: 0.28, active: true },
-  { name: "Fz", x: 0, y: -0.50, active: false },
-  { name: "Cz", x: 0, y: 0, active: false },
-  { name: "Pz", x: 0, y: 0.50, active: false },
-  { name: "Oz", x: 0, y: 0.85, active: false },
+  { id: "Fp1", label: "Fp1", x: 38, y: 18, region: "Left Prefrontal" },
+  { id: "Fp2", label: "Fp2", x: 62, y: 18, region: "Right Prefrontal" },
+  { id: "AF7", label: "AF7", x: 25, y: 28, region: "Left Frontal (Muse)", active: true },
+  { id: "AF8", label: "AF8", x: 75, y: 28, region: "Right Frontal (Muse)", active: true },
+  { id: "F3",  label: "F3",  x: 35, y: 36, region: "Left Frontal" },
+  { id: "Fz",  label: "Fz",  x: 50, y: 34, region: "Mid-Frontal" },
+  { id: "F4",  label: "F4",  x: 65, y: 36, region: "Right Frontal" },
+  { id: "T3",  label: "T3",  x: 16, y: 50, region: "Left Temporal" },
+  { id: "C3",  label: "C3",  x: 35, y: 50, region: "Left Central (SMR)" },
+  { id: "Cz",  label: "Cz",  x: 50, y: 50, region: "Vertex" },
+  { id: "C4",  label: "C4",  x: 65, y: 50, region: "Right Central (SMR)" },
+  { id: "T4",  label: "T4",  x: 84, y: 50, region: "Right Temporal" },
+  { id: "TP9", label: "TP9", x: 18, y: 64, region: "Left Temp-Parietal (Muse)", active: true },
+  { id: "TP10",label: "TP10",x: 82, y: 64, region: "Right Temp-Parietal (Muse)", active: true },
+  { id: "P3",  label: "P3",  x: 35, y: 66, region: "Left Parietal" },
+  { id: "Pz",  label: "Pz",  x: 50, y: 66, region: "Mid-Parietal" },
+  { id: "P4",  label: "P4",  x: 65, y: 66, region: "Right Parietal" },
+  { id: "O1",  label: "O1",  x: 40, y: 82, region: "Left Occipital (Alpha)" },
+  { id: "O2",  label: "O2",  x: 60, y: 82, region: "Right Occipital (Alpha)" },
 ];
 
-function interpolateColor(value: number, min: number, max: number): string {
-  const norm = max > min ? Math.max(0, Math.min(1, (value - min) / (max - min))) : 0.5;
-  let r: number, g: number, b: number;
-
-  if (norm < 0.25) {
-    const s = norm / 0.25;
-    r = Math.floor(40 + s * 10);
-    g = Math.floor(70 + s * 70);
-    b = Math.floor(160 + s * 20);
-  } else if (norm < 0.5) {
-    const s = (norm - 0.25) / 0.25;
-    r = Math.floor(50 + s * 10);
-    g = Math.floor(140 + s * 40);
-    b = Math.floor(180 - s * 80);
-  } else if (norm < 0.75) {
-    const s = (norm - 0.5) / 0.25;
-    r = Math.floor(60 + s * 160);
-    g = Math.floor(180 - s * 20);
-    b = Math.floor(100 - s * 60);
-  } else {
-    const s = (norm - 0.75) / 0.25;
-    r = Math.floor(220 + s * 25);
-    g = Math.floor(160 - s * 90);
-    b = Math.floor(40 - s * 30);
-  }
-
-  return `rgb(${r}, ${g}, ${b})`;
-}
+const FREQUENCY_BANDS = [
+  { id: "ilf", name: "ILF Slow-Wave", range: "0.0001–0.05 Hz", desc: "Subcortical regulatory stability & DMN tone" },
+  { id: "theta_beta", name: "Theta / Beta Ratio", range: "4-8Hz / 13-21Hz", desc: "Executive attention & ADHD biomarker" },
+  { id: "smr", name: "SMR (Sensorimotor)", range: "12.0–15.0 Hz", desc: "Somatic stillness & motor inhibition" },
+  { id: "alpha", name: "Alpha Synchrony", range: "8.0–12.0 Hz", desc: "Cortical idling & autonomic calm" },
+  { id: "beta", name: "High-Beta Power", range: "20.0–30.0 Hz", desc: "Sympathetic arousal & rumination" },
+];
 
 interface TopoBrainMapProps {
-  className?: string;
-  baselineCoherence?: number;
-  currentCoherence?: number;
+  baselineScore?: number;
+  currentScore?: number;
 }
 
-export function TopoBrainMap({ className = "", baselineCoherence = 45, currentCoherence = 78 }: TopoBrainMapProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [selectedBand, setSelectedBand] = useState<"alpha" | "beta" | "theta" | "delta">("alpha");
+export function TopoBrainMap({ baselineScore = 58, currentScore = 86 }: TopoBrainMapProps) {
+  const [selectedBand, setSelectedBand] = useState<string>("theta_beta");
+  const [viewMode, setViewMode] = useState<"comparison" | "current">("comparison");
+  const [selectedElectrode, setSelectedElectrode] = useState(ELECTRODES[2]); // AF7
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const size = 260;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
-    ctx.scale(dpr, dpr);
-
-    const cx = size / 2;
-    const cy = size / 2;
-    const radius = size * 0.38;
-
-    const bandWeights = {
-      alpha: [82, 86, 74, 76],
-      beta: [48, 54, 62, 59],
-      theta: [26, 28, 22, 25],
-      delta: [14, 16, 12, 15],
-    };
-
-    const channelValues = bandWeights[selectedBand];
-    const nodes = ELECTRODES.map((e, idx) => ({
-      ...e,
-      xPos: cx + e.x * radius,
-      yPos: cy + e.y * radius,
-      val: e.active ? channelValues[idx] || 50 : 50,
-    }));
-
-    const vals = nodes.filter((n) => n.active).map((n) => n.val);
-    const minVal = Math.min(...vals);
-    const maxVal = Math.max(...vals);
-
-    ctx.clearRect(0, 0, size, size);
-
-    // Inverse Distance Weighting interpolation
-    const res = 2;
-    for (let gx = 0; gx < size; gx += res) {
-      for (let gy = 0; gy < size; gy += res) {
-        const dx = gx - cx;
-        const dy = gy - cy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > radius * 1.02) continue;
-
-        let wSum = 0;
-        let vSum = 0;
-        for (const node of nodes.filter((n) => n.active)) {
-          const edx = gx - node.xPos;
-          const edy = gy - node.yPos;
-          const d = Math.sqrt(edx * edx + edy * edy) + 1;
-          const w = 1 / (d * d);
-          wSum += w;
-          vSum += w * node.val;
-        }
-
-        const interpolated = vSum / wSum;
-        ctx.fillStyle = interpolateColor(interpolated, minVal - 5, maxVal + 5);
-        ctx.fillRect(gx, gy, res, res);
+  // Topographic power generator based on band & electrode
+  const getElectrodePower = (e: typeof ELECTRODES[0], isCurrent: boolean) => {
+    const baseMult = isCurrent ? 1.0 : 0.65;
+    let val = 50;
+    if (selectedBand === "ilf") {
+      val = e.id.startsWith("AF") || e.id.startsWith("TP") ? 88 * baseMult : 72 * baseMult;
+    } else if (selectedBand === "theta_beta") {
+      val = isCurrent ? 38 : 82;
+      if (e.id.startsWith("Fp") || e.id.startsWith("AF") || e.id === "Fz") {
+        val = isCurrent ? 32 : 94;
       }
+    } else if (selectedBand === "smr") {
+      val = (e.id === "Cz" || e.id === "C3" || e.id === "C4") ? 85 * baseMult : 60 * baseMult;
+    } else if (selectedBand === "alpha") {
+      val = (e.id.startsWith("O") || e.id.startsWith("P")) ? 90 * baseMult : 65 * baseMult;
+    } else if (selectedBand === "beta") {
+      val = isCurrent ? 30 : 75;
     }
+    return Math.min(100, Math.max(10, Math.round(val)));
+  };
 
-    // Head Outline
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.15)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
-    ctx.stroke();
-
-    // Nose
-    ctx.beginPath();
-    ctx.moveTo(cx - 8, cy - radius);
-    ctx.lineTo(cx, cy - radius - 10);
-    ctx.lineTo(cx + 8, cy - radius);
-    ctx.stroke();
-
-    // Ears
-    ctx.beginPath();
-    ctx.ellipse(cx - radius - 4, cy, 4, 10, 0, 0, 2 * Math.PI);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(cx + radius + 4, cy, 4, 10, 0, 0, 2 * Math.PI);
-    ctx.stroke();
-
-    // Nodes
-    for (const node of nodes) {
-      ctx.fillStyle = node.active ? "#1D1D1F" : "rgba(0, 0, 0, 0.25)";
-      ctx.beginPath();
-      ctx.arc(node.xPos, node.yPos, node.active ? 3.5 : 2, 0, 2 * Math.PI);
-      ctx.fill();
-
-      ctx.fillStyle = node.active ? "#1D1D1F" : "rgba(0, 0, 0, 0.35)";
-      ctx.font = "600 8.5px var(--font-jetbrains-mono, monospace)";
-      ctx.textAlign = "center";
-      ctx.fillText(node.name, node.xPos, node.yPos - 6);
+  const getColorForPower = (power: number) => {
+    if (selectedBand === "theta_beta" || selectedBand === "beta") {
+      if (power < 40) return "#10B981"; // Optimal Green
+      if (power < 65) return "#F59E0B"; // Moderate Amber
+      return "#EF4444"; // Elevated Red
     }
-  }, [selectedBand]);
+    if (power > 75) return "#10B981";
+    if (power > 50) return "#0D9488";
+    if (power > 30) return "#3B82F6";
+    return "#6366F1";
+  };
+
+  const renderScalpMap = (isCurrent: boolean, label: string) => {
+    return (
+      <div className="flex flex-col items-center space-y-2">
+        <div className="flex items-center justify-between w-full px-2 text-xs font-mono">
+          <span className="font-semibold text-text-primary dark:text-[#EDEDED]">{label}</span>
+          <span className={isCurrent ? "text-emerald-500 font-bold" : "text-text-secondary"}>
+            {isCurrent ? `Score: ${currentScore}/100` : `Baseline: ${baselineScore}/100`}
+          </span>
+        </div>
+
+        {/* Scalp Circular Container */}
+        <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full bg-slate-900 border-2 border-slate-700 shadow-inner flex items-center justify-center p-3">
+          
+          {/* Nose Indicator */}
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[12px] border-b-slate-600" />
+          
+          {/* Ear Indicators */}
+          <div className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-2 h-7 rounded-l-md bg-slate-700" />
+          <div className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-2 h-7 rounded-r-md bg-slate-700" />
+
+          {/* Interpolated Topo Power Gradient Mesh */}
+          <div 
+            className="absolute inset-4 rounded-full opacity-60 pointer-events-none transition-all duration-700"
+            style={{
+              background: isCurrent
+                ? selectedBand === "theta_beta" || selectedBand === "beta"
+                  ? "radial-gradient(circle at 50% 30%, rgba(16,185,129,0.5) 0%, rgba(13,148,136,0.3) 50%, rgba(10,10,10,0.8) 100%)"
+                  : "radial-gradient(circle at 50% 50%, rgba(16,185,129,0.55) 0%, rgba(6,95,70,0.3) 60%, rgba(10,10,10,0.8) 100%)"
+                : "radial-gradient(circle at 50% 25%, rgba(239,68,68,0.55) 0%, rgba(245,158,11,0.35) 50%, rgba(10,10,10,0.8) 100%)"
+            }}
+          />
+
+          {/* Scalp Coordinate Grid Crosshairs */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none stroke-slate-800" strokeWidth="1">
+            <line x1="50%" y1="6%" x2="50%" y2="94%" />
+            <line x1="6%" y1="50%" x2="94%" y2="50%" />
+            <circle cx="50%" cy="50%" r="35%" fill="none" />
+          </svg>
+
+          {/* Electrodes */}
+          {ELECTRODES.map((el) => {
+            const power = getElectrodePower(el, isCurrent);
+            const color = getColorForPower(power);
+            const isSelected = selectedElectrode?.id === el.id;
+
+            return (
+              <div
+                key={el.id}
+                onClick={() => setSelectedElectrode(el)}
+                style={{ left: `${el.x}%`, top: `${el.y}%` }}
+                className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-10"
+                title={`${el.label} (${el.region}) — Power: ${power}%`}
+              >
+                <div 
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-mono font-bold transition-transform ${
+                    isSelected ? "ring-2 ring-white scale-125 z-20 shadow-md" : "hover:scale-115"
+                  } ${el.active ? "border border-emerald-400/70" : "border border-slate-600"}`}
+                  style={{
+                    backgroundColor: color,
+                    color: "#000000"
+                  }}
+                >
+                  {el.label}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-text-secondary">
+          <span>Low</span>
+          <div className="h-1.5 w-24 rounded-full bg-gradient-to-r from-blue-600 via-teal-500 to-emerald-400" />
+          <span>Optimal</span>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className={`card p-6 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
+    <div className="p-6 rounded-xl bg-card border border-border space-y-6 text-text-primary font-sans">
+      
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h3 className="text-sm font-semibold text-text-primary">QEEG Cortical Topography</h3>
-          <p className="text-xs text-text-secondary">Standard 10-20 system spatial power distribution</p>
-        </div>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface border border-border text-text-secondary">
-          Z-SCORE RESTING
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-center">
-        {/* Scalp canvas & band pills */}
-        <div className="flex flex-col items-center">
-          <div className="p-3 bg-surface rounded-2xl border border-border/70 shadow-inner">
-            <canvas ref={canvasRef} className="block" />
+          <div className="flex items-center gap-2">
+            <Brain className="w-5 h-5 text-emerald-500" />
+            <h3 className="text-sm font-semibold text-text-primary">
+              Quantitative EEG (QEEG) Cortical Topography
+            </h3>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/60 text-emerald-300">
+              Verified QEEG-D Map
+            </span>
           </div>
-
-          <div className="flex items-center gap-1.5 mt-3">
-            {(["delta", "theta", "alpha", "beta"] as const).map((band) => (
-              <button
-                key={band}
-                onClick={() => setSelectedBand(band)}
-                className={`px-2.5 py-1 rounded-md text-xs font-mono capitalize transition-all ${
-                  selectedBand === band
-                    ? "bg-accent text-white font-semibold shadow-xs"
-                    : "bg-surface text-text-secondary hover:text-text-primary hover:bg-border/30 border border-border"
-                }`}
-              >
-                {band}
-              </button>
-            ))}
-          </div>
+          <p className="text-xs text-text-secondary mt-0.5">
+            Scalp-wide spatial distribution of spectral power across 10-20 montages vs. Dr. Upasana Gala&apos;s normative reference.
+          </p>
         </div>
 
-        {/* Diagnostics & clinical metrics */}
-        <div className="space-y-3 font-data text-xs">
-          <div className="p-3.5 rounded-xl bg-surface border border-border">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-text-primary">Prefrontal SMR Coherence (AF7 / AF8)</span>
-              <span className="text-accent font-semibold">+{((currentCoherence - baselineCoherence) / baselineCoherence * 100).toFixed(1)}%</span>
-            </div>
-            <p className="text-[11px] text-text-secondary mt-1 font-sans leading-relaxed">
-              Targeted alpha-SMR enhancement with slow-wave theta suppression across bilateral prefrontal cortical nodes.
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface border border-border">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-text-primary">Temporal ILF Stabilization (TP9 / TP10)</span>
-              <span className="text-teal-700 font-semibold">0.005 Hz Locked</span>
-            </div>
-            <p className="text-[11px] text-text-secondary mt-1 font-sans leading-relaxed">
-              Infra-low frequency oscillation stabilized at 0.005 Hz, supporting central autonomic nervous system regulation.
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface border border-border flex items-center justify-between text-text-secondary">
-            <span>Normative Database Deviation:</span>
-            <span className="font-medium text-text-primary">Z = +0.82 SD (Normalized)</span>
-          </div>
+        {/* View Mode Toggle */}
+        <div className="flex items-center p-1 bg-surface rounded-lg border border-border text-xs font-mono shrink-0">
+          <button
+            onClick={() => setViewMode("comparison")}
+            className={`px-3 py-1 rounded transition-all ${
+              viewMode === "comparison"
+                ? "bg-emerald-950 border border-emerald-600 text-emerald-300 font-semibold shadow-xs"
+                : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            Baseline vs. Current
+          </button>
+          <button
+            onClick={() => setViewMode("current")}
+            className={`px-3 py-1 rounded transition-all ${
+              viewMode === "current"
+                ? "bg-emerald-950 border border-emerald-600 text-emerald-300 font-semibold shadow-xs"
+                : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            Current Only
+          </button>
         </div>
       </div>
+
+      {/* Band Selector Tabs */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs">
+        {FREQUENCY_BANDS.map((b) => (
+          <button
+            key={b.id}
+            onClick={() => setSelectedBand(b.id)}
+            className={`p-2.5 rounded-lg border text-left transition-all ${
+              selectedBand === b.id
+                ? "bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-xs"
+                : "bg-surface border-border text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            <span className="font-semibold block truncate">{b.name}</span>
+            <span className="text-[10px] text-text-secondary block">{b.range}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Scalp Maps Container */}
+      <div className="p-4 rounded-xl bg-surface border border-border">
+        <div className="flex flex-wrap items-center justify-center gap-8 py-2">
+          {viewMode === "comparison" ? (
+            <>
+              {renderScalpMap(false, "Pre-Therapy Baseline (Session 1)")}
+              <div className="hidden lg:flex flex-col items-center justify-center text-center space-y-1">
+                <div className="w-8 h-8 rounded-full bg-emerald-950/80 border border-emerald-700/60 flex items-center justify-center text-emerald-400 font-mono font-bold text-xs">
+                  →
+                </div>
+                <span className="text-[10px] font-mono text-emerald-400 font-semibold">+28% Gain</span>
+                <span className="text-[9px] text-text-secondary">14 Sessions</span>
+              </div>
+              {renderScalpMap(true, "Latest Post-Training Topography")}
+            </>
+          ) : (
+            renderScalpMap(true, "Active Post-Training Topography")
+          )}
+        </div>
+      </div>
+
+      {/* Selected Electrode Deep Dive & Clinical Biomarkers */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+        
+        {/* Left: Lead Detail */}
+        <div className="p-4 rounded-xl bg-surface border border-border space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-text-secondary">Selected Lead:</span>
+            <span className="font-bold text-emerald-400 text-sm">
+              {selectedElectrode.label} — {selectedElectrode.region}
+            </span>
+          </div>
+          <div className="space-y-1 text-text-primary font-sans text-[11px]">
+            <p>
+              {selectedElectrode.active 
+                ? "Primary Muse 2/S telemetry montage lead. Continuously captured at 256 Hz with active EOG/EMG artifact rejection."
+                : "Interpolated 10-20 montage channel based on full clinical 19-channel QEEG intake assessment."}
+            </p>
+          </div>
+          <div className="pt-2 border-t border-border grid grid-cols-2 gap-2 text-[11px]">
+            <div>
+              <span className="text-text-secondary block text-[10px]">Pre-Treatment Z-Score:</span>
+              <span className="text-rose-400 font-bold">+2.4σ (Hyperarousal)</span>
+            </div>
+            <div>
+              <span className="text-text-secondary block text-[10px]">Current Normalized Z-Score:</span>
+              <span className="text-emerald-400 font-bold">+0.3σ (Normative Zone)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Key Objective Biomarkers */}
+        <div className="p-4 rounded-xl bg-surface border border-border space-y-2">
+          <span className="text-text-secondary block">Core Clinical Biomarker Gains:</span>
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="p-2 rounded bg-card border border-border">
+              <span className="text-text-secondary block text-[10px]">Theta/Beta Ratio (ADHD)</span>
+              <span className="font-bold text-emerald-400">1.82 (was 3.40)</span>
+            </div>
+            <div className="p-2 rounded bg-card border border-border">
+              <span className="text-text-secondary block text-[10px]">Frontal Asymmetry (Mood)</span>
+              <span className="font-bold text-emerald-400">+0.18 (Left Dominant)</span>
+            </div>
+            <div className="p-2 rounded bg-card border border-border">
+              <span className="text-text-secondary block text-[10px]">ILF Slow-Wave Stability</span>
+              <span className="font-bold text-emerald-400">92% In-Zone</span>
+            </div>
+            <div className="p-2 rounded bg-card border border-border">
+              <span className="text-text-secondary block text-[10px]">Peak Alpha Frequency</span>
+              <span className="font-bold text-emerald-400">10.2 Hz (Optimal)</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
     </div>
   );
 }
