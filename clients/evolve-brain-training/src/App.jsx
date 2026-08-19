@@ -165,6 +165,7 @@ export default function App() {
             onUpdateClientNote={handleUpdateDoctorNote}
             onUpdateProtocol={handleUpdateProtocol}
             onOpenDemo={() => setIsDemoOpen(true)}
+            eegState={eegState}
           />
         )}
       </main>

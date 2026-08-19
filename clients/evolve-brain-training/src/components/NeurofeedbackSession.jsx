@@ -1,36 +1,57 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, Pause, Volume2, VolumeX, Sliders,
-  CheckCircle2, ArrowLeft, ShieldCheck, AlertCircle, Info, RefreshCw, Eye, EyeOff
+  CheckCircle2, ArrowLeft, ShieldCheck, AlertCircle, Info, RefreshCw, Eye, EyeOff,
+  Tv, Video, Film, Sparkles, Activity, Check, Heart, Smile
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const THERAPEUTIC_TRACKS = [
   {
     id: 'nature_stream',
+    type: 'mp4',
     title: 'Dr. Gala ILF Mountain Flow',
     desc: 'High-definition relaxing nature river and mountain canopy (Optimal for SMR/Alpha)',
     url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
   },
   {
     id: 'ocean_alpha',
+    type: 'mp4',
     title: 'Oceanic Alpha Wave Coherence',
     desc: 'Calming ocean swell and shoreline rhythm (Optimal for Autonomic Down-regulation)',
     url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4'
   },
   {
     id: 'forest_canopy',
+    type: 'mp4',
     title: 'Forest Sunlight Meditation',
     desc: 'Gentle wind through sunlight trees (Optimal for ADHD Attentional Anchoring)',
     url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4'
   },
   {
     id: 'sunset_flow',
+    type: 'mp4',
     title: 'Sunset Slow-Wave Horizon',
     desc: 'Infra-low sunset transition for parasympathetic soothing',
     url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4'
+  },
+  {
+    id: 'youtube_sample_1',
+    type: 'youtube',
+    youtubeId: '4xDzrJKXOOY', // Relaxing synthwave / study flow
+    title: 'Universal YouTube: Lofi / Ambient Flow',
+    desc: 'YouTube live stream overlay with real-time EEG blur and luminance modulation',
+    url: 'https://www.youtube.com/watch?v=4xDzrJKXOOY'
   }
 ];
+
+// Helper to extract YouTube ID
+function extractYouTubeId(url) {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
 
 export function NeurofeedbackSession({ 
   client, 
@@ -51,28 +72,50 @@ export function NeurofeedbackSession({
   const [showHUD, setShowHUD] = useState(true);
   const [done, setDone] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState(THERAPEUTIC_TRACKS[0]);
-  const [customUrl, setCustomUrl] = useState('');
-  const [showTrackPicker, setShowTrackPicker] = useState(false);
+  const [customYoutubeUrl, setCustomYoutubeUrl] = useState('');
+  const [activeYoutubeId, setActiveYoutubeId] = useState(null);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
 
-  // Protocols & Thresholds
+  // Protocols & Auto-Adaptive Thresholds
   const [protocolType, setProtocolType] = useState(
     client?.indication?.toLowerCase().includes('anxiety') ? 'anxiety' : 'adhd'
   );
   const [threshold, setThreshold] = useState(client?.protocolSensitivity || 65);
+  const [autoAdaptiveThreshold, setAutoAdaptiveThreshold] = useState(true);
   const [feedbackMode, setFeedbackMode] = useState('graded'); // 'graded' | 'stealth_dim' | 'discrete'
   const [isMuted, setIsMuted] = useState(false);
+
+  // Post-Session Subjective Check-in
+  const [postSessionRating, setPostSessionRating] = useState(null);
+  const [postSessionSaved, setPostSessionSaved] = useState(false);
 
   // Current Brain Metrics
   const focus = eegState?.focusScore || 82;
   const calm = eegState?.calmScore || 80;
   const orfHz = eegState?.optimalResponseFrequencyHz || 0.005;
 
-  // Determine if patient meets target protocol threshold
+  // Determine current metric
   const currentMetric = protocolType === 'adhd' 
     ? focus 
     : protocolType === 'anxiety' 
       ? calm 
       : Math.round((focus + calm) / 2);
+
+  // Adaptive auto-threshold logic (nudges threshold to maintain ~70% reward rate)
+  useEffect(() => {
+    if (!autoAdaptiveThreshold || !isActive) return;
+    const interval = setInterval(() => {
+      if (totalElapsedSeconds > 15) {
+        const currentZoneRate = (inZoneSeconds / totalElapsedSeconds) * 100;
+        if (currentZoneRate < 60 && threshold > 52) {
+          setThreshold(prev => Math.max(50, prev - 1)); // Lower difficulty slightly
+        } else if (currentZoneRate > 80 && threshold < 85) {
+          setThreshold(prev => Math.min(90, prev + 1)); // Increase challenge
+        }
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [autoAdaptiveThreshold, isActive, inZoneSeconds, totalElapsedSeconds, threshold]);
 
   const isAbove = currentMetric >= threshold;
 
@@ -85,7 +128,7 @@ export function NeurofeedbackSession({
     isInZone: isAbove,
   };
 
-  // Direct Video Control Handler
+  // Direct Video Control Handler (for HTML5 MP4)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -98,13 +141,9 @@ export function NeurofeedbackSession({
           if (!video.paused) video.pause();
         }
       } else {
-        // Continuous Graded Mode: Video plays continuously, visual filters & volume modulate smoothly
-        if (video.paused) {
-          video.play().catch(() => {});
-        }
+        if (video.paused) video.play().catch(() => {});
       }
 
-      // Audio volume modulation
       if (isMuted) {
         video.volume = 0;
       } else {
@@ -116,7 +155,7 @@ export function NeurofeedbackSession({
     } else {
       if (!video.paused) video.pause();
     }
-  }, [isActive, done, isAbove, feedbackMode, modulation.volumePct, isMuted]);
+  }, [isActive, done, isAbove, feedbackMode, modulation.volumePct, isMuted, activeYoutubeId]);
 
   // Timer Tick & In-Zone Tracking
   useEffect(() => {
@@ -143,6 +182,8 @@ export function NeurofeedbackSession({
     setTimeLeft(selectedDurationMin * 60);
     setInZoneSeconds(0);
     setTotalElapsedSeconds(0);
+    setPostSessionSaved(false);
+    setPostSessionRating(null);
     if (videoRef.current) {
       videoRef.current.play().catch(() => {});
     }
@@ -163,6 +204,25 @@ export function NeurofeedbackSession({
     } catch {}
   };
 
+  const handleApplyCustomYoutube = (e) => {
+    e.preventDefault();
+    const yId = extractYouTubeId(customYoutubeUrl);
+    if (yId) {
+      setActiveYoutubeId(yId);
+      setSelectedTrack({
+        id: `yt_${yId}`,
+        type: 'youtube',
+        youtubeId: yId,
+        title: 'Custom YouTube Stream',
+        desc: `Video ID: ${yId}`,
+        url: customYoutubeUrl
+      });
+      setShowMediaPicker(false);
+    } else {
+      alert('Please enter a valid YouTube URL (e.g. https://www.youtube.com/watch?v=...)');
+    }
+  };
+
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -173,7 +233,7 @@ export function NeurofeedbackSession({
     ? Math.round((inZoneSeconds / totalElapsedSeconds) * 100) 
     : 0;
 
-  // Compute CSS filter for video element
+  // Compute CSS filter for video & YouTube overlay
   const videoFilterStyle = feedbackMode === 'graded'
     ? {
         filter: `brightness(${modulation.brightnessPct}%) blur(${modulation.blurPx}px)`,
@@ -185,7 +245,7 @@ export function NeurofeedbackSession({
         transform: 'scale(1)',
       }
     : {
-        filter: isActive && !isAbove ? 'blur(4px) brightness(35%)' : 'none',
+        filter: isActive && !isAbove ? 'blur(5px) brightness(30%)' : 'none',
         transform: 'scale(1)',
       };
 
@@ -202,7 +262,6 @@ export function NeurofeedbackSession({
 
     ctx.clearRect(0, 0, rect.width, rect.height);
 
-    // Background grid
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 1;
     for (let x = 0; x < rect.width; x += 24) {
@@ -258,7 +317,7 @@ export function NeurofeedbackSession({
     dcPotentialOffsetMv: -4.2,
   };
 
-  const bandPowers = eegState?.bandPowers || { delta: 12, theta: 14, alpha: 48, beta: 20, gamma: 4 };
+  const isYouTubeActive = selectedTrack?.type === 'youtube' || activeYoutubeId;
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 space-y-6 text-[#EDEDED] font-sans">
@@ -290,13 +349,24 @@ export function NeurofeedbackSession({
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2.5">
+          
+          {/* Media Switcher Button */}
+          <button
+            onClick={() => setShowMediaPicker(!showMediaPicker)}
+            className="btn btn-outline text-xs py-1.5 px-3 flex items-center gap-1.5 font-mono"
+            title="Choose Curated Video or Paste Custom YouTube Link"
+          >
+            <Video className="w-3.5 h-3.5 text-rose-400" />
+            <span className="truncate max-w-[130px]">{selectedTrack.title}</span>
+          </button>
+
           {/* Protocol Type Selector */}
           <div className="flex items-center p-1 bg-[#161616] rounded-lg border border-[#333333] text-xs font-mono">
             <button
               onClick={() => setProtocolType('adhd')}
               className={`px-2.5 py-1 rounded transition-all ${
                 protocolType === 'adhd'
-                  ? 'bg-[#2E6F65] text-white font-semibold shadow-xs'
+                  ? 'bg-emerald-950 border border-emerald-600 text-emerald-300 font-semibold shadow-xs'
                   : 'text-[#888888] hover:text-[#EDEDED]'
               }`}
             >
@@ -306,37 +376,11 @@ export function NeurofeedbackSession({
               onClick={() => setProtocolType('anxiety')}
               className={`px-2.5 py-1 rounded transition-all ${
                 protocolType === 'anxiety'
-                  ? 'bg-[#2E6F65] text-white font-semibold shadow-xs'
+                  ? 'bg-emerald-950 border border-emerald-600 text-emerald-300 font-semibold shadow-xs'
                   : 'text-[#888888] hover:text-[#EDEDED]'
               }`}
             >
               Anxiety Calm
-            </button>
-          </div>
-
-          {/* Feedback Mode */}
-          <div className="flex items-center p-1 bg-[#161616] rounded-lg border border-[#333333] text-xs font-mono">
-            <button
-              onClick={() => setFeedbackMode('graded')}
-              className={`px-2.5 py-1 rounded transition-all ${
-                feedbackMode === 'graded'
-                  ? 'bg-[#2E6F65] text-white font-semibold shadow-xs'
-                  : 'text-[#888888] hover:text-[#EDEDED]'
-              }`}
-              title="Continuous graded luminance, aperture and volume"
-            >
-              Graded Flow
-            </button>
-            <button
-              onClick={() => setFeedbackMode('discrete')}
-              className={`px-2.5 py-1 rounded transition-all ${
-                feedbackMode === 'discrete'
-                  ? 'bg-[#2E6F65] text-white font-semibold shadow-xs'
-                  : 'text-[#888888] hover:text-[#EDEDED]'
-              }`}
-              title="Operant Play/Pause"
-            >
-              Play/Pause
             </button>
           </div>
 
@@ -370,11 +414,80 @@ export function NeurofeedbackSession({
         </div>
       </div>
 
+      {/* Media Picker Dropdown / Modal */}
+      {showMediaPicker && (
+        <div className="p-5 rounded-xl bg-[#141414] border border-[#333333] space-y-4 shadow-xl animate-fade-in">
+          <div className="flex items-center justify-between border-b border-[#2A2A2A] pb-2.5">
+            <div className="flex items-center gap-2">
+              <Film className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs font-semibold text-[#EDEDED]">Select Sensory Media Feed (Divergence-Beating Engine)</span>
+            </div>
+            <button
+              onClick={() => setShowMediaPicker(false)}
+              className="text-xs text-[#888888] hover:text-white"
+            >
+              Close ✕
+            </button>
+          </div>
+
+          {/* Custom YouTube Link Input */}
+          <form onSubmit={handleApplyCustomYoutube} className="flex gap-2">
+            <div className="relative flex-1">
+              <Video className="w-4 h-4 absolute left-3 top-2.5 text-rose-500" />
+              <input
+                type="text"
+                value={customYoutubeUrl}
+                onChange={(e) => setCustomYoutubeUrl(e.target.value)}
+                placeholder="Paste any YouTube URL (e.g., https://www.youtube.com/watch?v=...)"
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-lg bg-[#0D0D0D] border border-[#333333] text-[#EDEDED] focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <button
+              type="submit"
+              className="btn btn-primary text-xs py-2 px-4 shrink-0 font-semibold"
+            >
+              Load YouTube
+            </button>
+          </form>
+
+          {/* Preset Library */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {THERAPEUTIC_TRACKS.map((t) => (
+              <div
+                key={t.id}
+                onClick={() => {
+                  setSelectedTrack(t);
+                  setActiveYoutubeId(t.youtubeId || null);
+                  setShowMediaPicker(false);
+                }}
+                className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
+                  selectedTrack.id === t.id
+                    ? 'bg-emerald-950/80 border-emerald-500 shadow-xs'
+                    : 'bg-[#181818] border-[#2A2A2A] hover:bg-[#222222]'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[#EDEDED]">{t.title}</span>
+                  {t.type === 'youtube' ? (
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-rose-950/80 text-rose-400 border border-rose-800">YouTube</span>
+                  ) : (
+                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-teal-950/80 text-teal-300 border border-teal-800">4K MP4</span>
+                  )}
+                </div>
+                <p className="text-[10px] text-[#888888] mt-1 line-clamp-1">{t.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main Controlled Immersive Video Stage */}
       <div className="relative rounded-2xl overflow-hidden bg-black border border-[#222222] shadow-2xl">
+        
         {/* Floating Telemetry HUD */}
         {showHUD && (
           <div className="absolute top-4 left-4 right-4 z-30 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+            
             {/* Live State Badge */}
             <div className="pointer-events-auto flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-black/85 backdrop-blur-md border border-white/15 text-white">
               <span
@@ -391,14 +504,35 @@ export function NeurofeedbackSession({
                   {isAbove
                     ? 'Optimal ILF Synchrony (In Zone)'
                     : athena.emgClenchDetected
-                    ? 'Somatic Muscle Tension (Gated)'
+                    ? 'Somatic Muscle Tension (EMG Gated)'
                     : 'Sub-Threshold Slow-Wave Reflection'}
                 </p>
                 <p className="text-[10px] text-white/70 font-sans leading-none mt-0.5">
                   {protocolType === 'adhd'
-                    ? `Focus: ${focus}% (Threshold >= ${threshold}%)`
-                    : `Calm: ${calm}% (Threshold >= ${threshold}%)`} · Brightness: {modulation.brightnessPct}% · Volume: {modulation.volumePct}%
+                    ? `Focus: ${focus}% (Target >= ${threshold}%)`
+                    : `Calm: ${calm}% (Target >= ${threshold}%)`} · Brightness: {modulation.brightnessPct}% · Volume: {modulation.volumePct}%
                 </p>
+              </div>
+            </div>
+
+            {/* Artifact Badges & Adaptive Indicator */}
+            <div className="pointer-events-auto hidden md:flex items-center gap-2 font-mono text-[10px]">
+              <div className={`px-2.5 py-1 rounded-lg backdrop-blur-md border flex items-center gap-1.5 ${
+                athena.eogBlinkFilterActive 
+                  ? 'bg-emerald-950/80 border-emerald-600/70 text-emerald-300' 
+                  : 'bg-black/70 border-white/10 text-white/60'
+              }`}>
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                <span>EOG Blink Filter Active</span>
+              </div>
+
+              <div className={`px-2.5 py-1 rounded-lg backdrop-blur-md border flex items-center gap-1.5 ${
+                autoAdaptiveThreshold
+                  ? 'bg-teal-950/80 border-teal-600/70 text-teal-300'
+                  : 'bg-black/70 border-white/10 text-white/60'
+              }`}>
+                <Activity className="w-3 h-3 text-teal-400" />
+                <span>Auto-Adaptive Target (70%)</span>
               </div>
             </div>
 
@@ -419,23 +553,48 @@ export function NeurofeedbackSession({
           </div>
         )}
 
-        {/* Embedded HTML5 Video Stream with Real-time CSS Filter */}
+        {/* Embedded Video Display (HTML5 or YouTube Iframe) */}
         <div className="relative aspect-video w-full overflow-hidden bg-black flex items-center justify-center">
-          <video
-            ref={videoRef}
-            src={selectedTrack.url}
-            loop
-            playsInline
-            muted={isMuted}
-            className="w-full h-full object-cover transition-all duration-300 ease-out"
-            style={videoFilterStyle}
-          />
+          
+          {isYouTubeActive ? (
+            /* YouTube Streaming Embed with Live CSS Dynamic Filter */
+            <div 
+              className="w-full h-full relative overflow-hidden transition-all duration-300 ease-out"
+              style={videoFilterStyle}
+            >
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${selectedTrack.youtubeId || activeYoutubeId}?autoplay=1&mute=${isMuted ? 1 : 0}&controls=0&loop=1&playlist=${selectedTrack.youtubeId || activeYoutubeId}&modestbranding=1&rel=0`}
+                title="YouTube Neurofeedback Stream"
+                className="w-full h-full pointer-events-none border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              />
+              {/* Dynamic Overlay Mask for Sub-Threshold feedback */}
+              <div 
+                className="absolute inset-0 pointer-events-none transition-all duration-500"
+                style={{
+                  backgroundColor: !isAbove && isActive ? 'rgba(0,0,0,0.45)' : 'transparent',
+                  backdropFilter: !isAbove && isActive ? `blur(${modulation.blurPx}px)` : 'none',
+                }}
+              />
+            </div>
+          ) : (
+            /* HTML5 Video Track with CSS Filter */
+            <video
+              ref={videoRef}
+              src={selectedTrack.url}
+              loop
+              playsInline
+              muted={isMuted}
+              className="w-full h-full object-cover transition-all duration-300 ease-out"
+              style={videoFilterStyle}
+            />
+          )}
 
           {/* Not started overlay */}
           {!isActive && !done && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/70 backdrop-blur-xs p-6 text-white text-center">
               <div className="max-w-md space-y-3">
-                <span className="text-[11px] font-mono tracking-wider uppercase text-amber-400 bg-amber-950/80 px-2.5 py-1 rounded border border-amber-600">
+                <span className="text-[11px] font-mono tracking-wider uppercase text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded border border-emerald-700">
                   Infra-Low Video Stream Ready
                 </span>
                 <h3 className="text-xl font-light tracking-tight font-sans">
@@ -449,300 +608,170 @@ export function NeurofeedbackSession({
                     onClick={handleStartSession}
                     className="btn btn-primary text-xs py-2.5 px-6 font-semibold shadow-lg"
                   >
-                    Begin Session
-                  </button>
-                  <button
-                    onClick={() => setShowTrackPicker(!showTrackPicker)}
-                    className="btn btn-outline text-xs py-2.5 px-4"
-                  >
-                    Select Video Track
+                    Launch Continuous Sensory Session →
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Track Picker Drawer */}
-          {showTrackPicker && (
-            <div className="absolute inset-0 z-30 bg-black/85 backdrop-blur-md p-6 flex flex-col justify-center max-w-lg mx-auto">
-              <h4 className="text-sm font-semibold text-[#EDEDED] mb-3">
-                Choose Therapeutic Video Stream
-              </h4>
-              <div className="space-y-2">
-                {THERAPEUTIC_TRACKS.map(t => (
-                  <div
-                    key={t.id}
-                    onClick={() => {
-                      setSelectedTrack(t);
-                      setShowTrackPicker(false);
-                    }}
-                    className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
-                      selectedTrack.id === t.id
-                        ? 'bg-[#1A332F] border-emerald-500 text-white'
-                        : 'bg-[#141414] border-[#333333] hover:bg-[#1C1C1C]'
-                    }`}
-                  >
-                    <span className="text-xs font-semibold block">{t.title}</span>
-                    <span className="text-[11px] text-[#888888] block mt-0.5">{t.desc}</span>
+          {/* Session Finished & Post-Session Check-in Screen */}
+          {done && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/85 backdrop-blur-md p-6 text-white text-center">
+              <div className="max-w-md space-y-4 p-6 rounded-2xl bg-[#111111] border border-[#333333] shadow-2xl">
+                <div className="w-12 h-12 rounded-full bg-emerald-950 border border-emerald-500 flex items-center justify-center mx-auto text-emerald-400">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-semibold">Session 15 Completed!</h3>
+                <p className="text-xs text-[#888888]">
+                  You sustained optimal slow-wave coherence for{' '}
+                  <strong className="text-emerald-400">{formatTime(inZoneSeconds)} ({zonePercent}% in-zone)</strong>.
+                </p>
+
+                {/* Subjective Check-in Rating */}
+                {!postSessionSaved ? (
+                  <div className="p-3.5 rounded-xl bg-[#181818] border border-[#2A2A2A] space-y-2 text-left">
+                    <span className="text-xs font-semibold text-[#EDEDED] block">
+                      Post-Session Subjective Check-in:
+                    </span>
+                    <p className="text-[11px] text-[#888888]">
+                      How calm and focused do you feel right now?
+                    </p>
+                    <div className="flex items-center justify-between gap-1 pt-1 font-mono text-xs">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                        <button
+                          key={num}
+                          onClick={() => setPostSessionRating(num)}
+                          className={`w-8 h-8 rounded-lg border text-center transition-all ${
+                            postSessionRating === num
+                              ? 'bg-emerald-950 border-emerald-500 text-emerald-300 font-bold'
+                              : 'bg-[#111111] border-[#333333] text-[#888888] hover:text-white'
+                          }`}
+                        >
+                          {num}
+                        </button>
+                      ))}
+                    </div>
+                    {postSessionRating && (
+                      <button
+                        onClick={() => setPostSessionSaved(true)}
+                        className="btn btn-primary w-full text-xs py-1.5 mt-2 font-semibold"
+                      >
+                        Submit Check-in to Dr. Gala →
+                      </button>
+                    )}
                   </div>
-                ))}
+                ) : (
+                  <div className="p-3 rounded-lg bg-emerald-950/70 border border-emerald-600 text-emerald-300 text-xs flex items-center justify-center gap-2">
+                    <Check className="w-4 h-4" />
+                    <span>Check-in rating ({postSessionRating}/10) logged to clinical chart!</span>
+                  </div>
+                )}
+
+                <div className="flex justify-center gap-3 pt-2">
+                  <button
+                    onClick={onFinish}
+                    className="btn btn-primary text-xs py-2 px-5 font-semibold"
+                  >
+                    Return to Patient Dashboard
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => setShowTrackPicker(false)}
-                className="mt-4 text-xs text-[#888888] hover:text-[#EDEDED] text-center"
-              >
-                Close
-              </button>
             </div>
           )}
         </div>
-
-        {/* Athena Telemetry Status Bar */}
-        <div className="p-3 bg-[#0A0C10] border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-white/80">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] text-white/50 uppercase">Athena Sensor Fusion:</span>
-            <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-emerald-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              EOG Blink Rejection: Active
-            </span>
-            <span
-              className={`px-2 py-0.5 rounded border text-[10px] flex items-center gap-1 ${
-                athena.emgClenchDetected
-                  ? 'bg-rose-950/60 border-rose-600 text-rose-400 font-bold'
-                  : 'bg-white/5 border-white/10 text-emerald-400'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${athena.emgClenchDetected ? 'bg-rose-400' : 'bg-emerald-400'}`} />
-              EMG Somatic Inhibit: {athena.emgClenchDetected ? 'Jaw Clench Filtered' : 'Relaxed'}
-            </span>
-            <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-emerald-400">
-              6-Axis IMU Stillness: {athena.imuHeadStabilityPercent}%
-            </span>
-            <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-emerald-400">
-              HRV Autonomic: {athena.hrvAutonomicCoherence}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-amber-400">DC Slow Potential:</span>
-            <span className="font-semibold text-white font-mono">{athena.dcPotentialOffsetMv} mV</span>
-          </div>
-        </div>
       </div>
 
-      {/* Multi-Channel Oscilloscope & Band Spectrum */}
+      {/* Bottom Row: Multi-Channel Oscilloscope & Live Signal Health */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 p-5 rounded-xl bg-[#111111] border border-[#222222] flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-sm font-semibold text-[#EDEDED]">
-                Multi-Channel Oscilloscope & ILF Slow Wave
-              </h3>
-              <p className="text-xs text-[#888888]">
-                Infra-low potential ({orfHz} Hz) + 4-channel telemetry (AF7, AF8, TP9, TP10)
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5">
-              {[0.002, 0.005, 0.012, 0.020].map(hz => (
-                <button
-                  key={hz}
-                  onClick={() => mockService?.setOptimalResponseFrequency(hz)}
-                  className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-all ${
-                    orfHz === hz
-                      ? 'bg-amber-950/80 border-amber-600 text-amber-400 font-semibold'
-                      : 'bg-[#161616] border-[#333333] text-[#888888] hover:text-[#EDEDED]'
-                  }`}
-                >
-                  {hz}Hz
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="h-44">
-            <canvas ref={waveRef} className="w-full h-full block rounded-lg" />
-          </div>
-        </div>
-
-        {/* 5-Band Spectral Power Distribution */}
-        <div className="p-5 rounded-xl bg-[#111111] border border-[#222222] flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-[#EDEDED]">Frequency Power Bands</h3>
-            <span className="text-[10px] font-mono text-[#888888]">Welch PSD</span>
-          </div>
-
-          <div className="space-y-2.5 font-mono text-xs">
-            {[
-              { label: 'Delta (0.5–4 Hz)', val: bandPowers.delta, color: 'bg-slate-500' },
-              { label: 'Theta (4–8 Hz)', val: bandPowers.theta, color: bandPowers.theta > 25 ? 'bg-amber-500' : 'bg-blue-500' },
-              { label: 'Alpha (8–12 Hz)', val: bandPowers.alpha, color: 'bg-emerald-400' },
-              { label: 'Beta / SMR (12–30 Hz)', val: bandPowers.beta, color: 'bg-cyan-400' },
-              { label: 'Gamma (30–45 Hz)', val: bandPowers.gamma, color: 'bg-indigo-400' },
-            ].map(b => (
-              <div key={b.label} className="p-2 rounded-lg bg-[#161616] border border-[#222222]">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-[#888888]">{b.label}</span>
-                  <span className="font-semibold text-[#EDEDED]">{Math.round(b.val)}%</span>
-                </div>
-                <div className="w-full bg-[#222222] rounded-full h-1.5 mt-1 overflow-hidden">
-                  <div
-                    className={`${b.color} h-full rounded-full transition-all duration-300`}
-                    style={{ width: `${Math.min(100, b.val * 1.8)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Live Presentation Simulator Controls (Clean, Minimalist, No Emojis) */}
-      <div className="p-5 rounded-xl bg-[#111111] border border-[#333333] shadow-xs space-y-4 font-mono text-xs">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#222222] pb-3">
-          <div>
+        
+        {/* Left 2 Cols: Live EEG Oscilloscope Canvas */}
+        <div className="lg:col-span-2 p-5 rounded-xl bg-[#111111] border border-[#222222] space-y-3 shadow-xs">
+          <div className="flex items-center justify-between border-b border-[#222222] pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-semibold text-[#EDEDED] font-sans text-sm">
-                Live State Controller & Simulator
-              </span>
-              <span className="text-[10px] text-[#888888] bg-[#161616] px-2 py-0.5 rounded border border-[#222222]">
-                Instant Response Demo
+              <Activity className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs font-semibold text-[#EDEDED]">
+                Real-Time 4-Channel Telemetry & ILF Slow Wave
               </span>
             </div>
-            <p className="text-xs text-[#888888] mt-0.5 font-sans">
-              Click any clinical state or drag continuous sliders to evaluate immediate video blur, dimming, and audio modulation
-            </p>
+            <div className="flex items-center gap-3 text-[10px] font-mono text-[#888888]">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> ILF ({orfHz}Hz)
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-400" /> AF7/AF8
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-400" /> TP9/TP10
+              </span>
+            </div>
+          </div>
+
+          <div className="relative h-44 w-full rounded-lg bg-[#0A0A0A] border border-[#222222] overflow-hidden">
+            <canvas ref={waveRef} className="w-full h-full block" />
           </div>
         </div>
 
-        {/* 4 State Trigger Buttons */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { 
-              mode: 'ilf_flow', 
-              title: 'Balanced ILF Flow', 
-              score: '88%',
-              desc: '100% Brightness & Volume',
-              cls: 'bg-emerald-950/70 text-emerald-300 border-emerald-600' 
-            },
-            { 
-              mode: 'deep_calm', 
-              title: 'Deep Parasympathetic Calm', 
-              score: '94%',
-              desc: 'High Alpha Synchrony',
-              cls: 'bg-cyan-950/70 text-cyan-300 border-cyan-600' 
-            },
-            { 
-              mode: 'attentional_drift', 
-              title: 'Attentional Theta Drift', 
-              score: '34%',
-              desc: 'Graded Dim & Blur Triggered',
-              cls: 'bg-amber-950/70 text-amber-300 border-amber-600' 
-            },
-            { 
-              mode: 'somatic_tension', 
-              title: 'Somatic Muscle Tension', 
-              score: '24%',
-              desc: 'EMG Jaw Inhibit Active',
-              cls: 'bg-rose-950/70 text-rose-300 border-rose-600' 
-            }
-          ].map(b => (
-            <button
-              key={b.mode}
-              onClick={() => mockService?.setMode(b.mode)}
-              className={`p-3 rounded-xl border text-left transition-all ${
-                eegState?.mode === b.mode ? b.cls + ' shadow-xs font-semibold' : 'bg-[#161616] text-[#EDEDED] border-[#222222] hover:bg-[#202020]'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold">{b.title}</span>
-                <span className="text-[11px] font-bold">{b.score}</span>
+        {/* Right 1 Col: Signal Quality & Artifact Rejection Status */}
+        <div className="p-5 rounded-xl bg-[#111111] border border-[#222222] space-y-4 shadow-xs">
+          <div className="flex items-center justify-between border-b border-[#222222] pb-2.5">
+            <span className="text-xs font-semibold text-[#EDEDED]">Signal Health & Gatekeeper</span>
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700">
+              256 Hz Live
+            </span>
+          </div>
+
+          <div className="space-y-2.5 text-xs font-mono">
+            {/* Auto-Adaptive Toggle */}
+            <div className="p-2.5 rounded-lg bg-[#161616] border border-[#222222] flex items-center justify-between">
+              <div>
+                <span className="text-[#EDEDED] font-semibold block text-[11px]">Adaptive Auto-Threshold</span>
+                <span className="text-[9px] text-[#888888]">Targets ~70% Flow Zone</span>
               </div>
-              <span className="text-[10px] text-[#888888] block mt-1">{b.desc}</span>
-            </button>
-          ))}
+              <input
+                type="checkbox"
+                checked={autoAdaptiveThreshold}
+                onChange={(e) => setAutoAdaptiveThreshold(e.target.checked)}
+                className="accent-emerald-500 cursor-pointer h-4 w-4"
+              />
+            </div>
+
+            {/* Threshold Slider */}
+            <div className="p-2.5 rounded-lg bg-[#161616] border border-[#222222] space-y-1">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-[#888888]">Threshold Sensitivity:</span>
+                <span className="text-emerald-400 font-bold">{threshold}%</span>
+              </div>
+              <input
+                type="range"
+                min="50"
+                max="90"
+                value={threshold}
+                onChange={(e) => {
+                  setAutoAdaptiveThreshold(false);
+                  setThreshold(Number(e.target.value));
+                }}
+                className="w-full accent-emerald-500 cursor-pointer"
+              />
+            </div>
+
+            {/* Artifact Flags */}
+            <div className="grid grid-cols-2 gap-2 text-[10px]">
+              <div className="p-2 rounded bg-[#161616] border border-[#222222]">
+                <span className="text-[#888888] block">Ocular Blink</span>
+                <span className="font-bold text-emerald-400">Filtered (0.8s)</span>
+              </div>
+              <div className="p-2 rounded bg-[#161616] border border-[#222222]">
+                <span className="text-[#888888] block">Jaw Clench (EMG)</span>
+                <span className={`font-bold ${athena.emgClenchDetected ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  {athena.emgClenchDetected ? 'Gated' : 'Clear'}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Live Manual Sliders */}
-        <div className="pt-2 border-t border-[#222222] grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-3 rounded-xl bg-[#161616] border border-[#222222]">
-            <div className="flex items-center justify-between text-xs mb-1.5 font-sans">
-              <span className="text-[#888888]">Continuous Focus Score:</span>
-              <span className="font-bold text-[#EDEDED] font-mono">{focus}%</span>
-            </div>
-            <input 
-              type="range" 
-              min="10" 
-              max="98" 
-              value={focus} 
-              onChange={(e) => mockService?.setManualScores(Number(e.target.value), calm)}
-              className="w-full accent-emerald-500 cursor-pointer"
-            />
-          </div>
-
-          <div className="p-3 rounded-xl bg-[#161616] border border-[#222222]">
-            <div className="flex items-center justify-between text-xs mb-1.5 font-sans">
-              <span className="text-[#888888]">Continuous Calm Score:</span>
-              <span className="font-bold text-[#EDEDED] font-mono">{calm}%</span>
-            </div>
-            <input 
-              type="range" 
-              min="10" 
-              max="98" 
-              value={calm} 
-              onChange={(e) => mockService?.setManualScores(focus, Number(e.target.value))}
-              className="w-full accent-cyan-500 cursor-pointer"
-            />
-          </div>
-        </div>
       </div>
-
-      {/* Completion Modal */}
-      {done && (
-        <div className="fixed inset-0 z-50 bg-[#000000]/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="max-w-md w-full p-8 rounded-xl bg-[#111111] border border-[#333333] shadow-2xl text-center space-y-6">
-            <div className="w-14 h-14 rounded-full bg-emerald-950/80 border border-emerald-600 mx-auto flex items-center justify-center text-emerald-400">
-              <CheckCircle2 className="w-7 h-7" />
-            </div>
-
-            <div>
-              <span className="text-[11px] uppercase tracking-widest text-emerald-400 font-mono font-semibold">
-                NEUROPLASTIC TARGET MET
-              </span>
-              <h3 className="text-2xl font-light text-[#EDEDED] tracking-tight font-sans mt-1">
-                Therapy Session Complete
-              </h3>
-              <p className="text-xs text-[#888888] mt-1.5 leading-relaxed font-sans">
-                You maintained optimal slow-wave flow for <strong>{zonePercent}%</strong> of today&apos;s prescribed session.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2.5 font-mono">
-              <div className="bg-[#000000] border border-[#222222] rounded-lg p-3 text-center">
-                <span className="text-[9px] text-[#888888] uppercase block">In Zone</span>
-                <span className="text-xl font-bold text-emerald-400">{zonePercent}%</span>
-              </div>
-              <div className="bg-[#000000] border border-[#222222] rounded-lg p-3 text-center">
-                <span className="text-[9px] text-[#888888] uppercase block">Avg Focus</span>
-                <span className="text-xl font-bold text-[#EDEDED]">{focus}%</span>
-              </div>
-              <div className="bg-[#000000] border border-[#222222] rounded-lg p-3 text-center">
-                <span className="text-[9px] text-[#888888] uppercase block">Avg Calm</span>
-                <span className="text-xl font-bold text-[#EDEDED]">{calm}%</span>
-              </div>
-            </div>
-
-            <button 
-              onClick={() => {
-                setDone(false);
-                onFinish();
-              }}
-              className="btn btn-primary w-full py-3 rounded-lg text-xs font-semibold"
-            >
-              Save Record & Return to Portal →
-            </button>
-          </div>
-        </div>
-      )}
 
     </div>
   );
